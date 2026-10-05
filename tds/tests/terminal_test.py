@@ -137,8 +137,9 @@ def free_port():
         return s.getsockname()[1]
 
 
-def start(port):
-    p = subprocess.Popen([sys.executable, str(TDS / 'terminal.py'), '--port', str(port), '--key', KEY, '--quiet', '--shell', '/bin/bash'])
+def start(port, env=None):
+    p = subprocess.Popen([sys.executable, str(TDS / 'terminal.py'), '--port', str(port), '--key', KEY, '--quiet', '--shell', '/bin/bash'],
+                         env=dict(os.environ, **(env or {})))
     for _ in range(100):
         try:
             socket.create_connection(('127.0.0.1', port), timeout=0.2).close()
@@ -175,6 +176,66 @@ def listening_addresses(port):
         if int(p, 16) == port and state == '0A':
             found.append('.'.join(str(b) for b in reversed(bytes.fromhex(ip))))
     return found
+
+
+def get(port, path, host=None, extra='', method='GET'):
+    """Petición HTTP cruda al puente: (estado, cabeceras, cuerpo)."""
+    with socket.create_connection(('127.0.0.1', port), timeout=10) as s:
+        s.sendall(f'{method} {path} HTTP/1.1\r\nHost: {host or f"127.0.0.1:{port}"}\r\n{extra}Connection: close\r\n\r\n'.encode())
+        data = b''
+        while True:
+            c = s.recv(1 << 16)
+            if not c:
+                break
+            data += c
+    head, _, body = data.partition(b'\r\n\r\n')
+    lines = head.decode('latin-1').split('\r\n')
+    hdrs = {k.strip().lower(): v.strip() for k, v in (x.split(':', 1) for x in lines[1:] if ':' in x)}
+    return int(lines[0].split()[1]), hdrs, body
+
+
+def web_tests():
+    """El puente sirve el aula (y sus PDF y videos) a este equipo, y en un Codespace solo a la dirección de ese Codespace."""
+    hub = next((p for p in (TDS.parent / 'hub' / 'dist' / 'index.html', TDS.parent / 'index.html') if p.exists()), None)
+    pdf = next(iter(sorted((TDS.parent / 'materiales').glob('unidad-1/*.pdf'))), None)
+    port = free_port()
+    bridge = start(port)
+    try:
+        if hub:
+            st, h, body = get(port, '/')
+            check('sirve el aula en http://127.0.0.1:PUERTO/ (200, HTML)', st == 200 and h.get('content-type', '').startswith('text/html')
+                  and b'HUB_CONFIG' in body and len(body) == hub.stat().st_size, f'{st} {h.get("content-type")}')
+            st, h, body = get(port, '/', method='HEAD')
+            check('HEAD / → solo cabeceras', st == 200 and body == b'' and int(h.get('content-length', -1)) == hub.stat().st_size)
+        if pdf:
+            rel = pdf.relative_to(TDS.parent).as_posix()
+            st, h, body = get(port, '/' + rel)
+            check('sirve los PDF de materiales/', st == 200 and h.get('content-type') == 'application/pdf' and body == pdf.read_bytes(), str(st))
+            st, h, body = get(port, '/' + rel, extra='Range: bytes=100-199\r\n')
+            check('pedido parcial (Range) → 206 con esos 100 bytes', st == 206 and body == pdf.read_bytes()[100:200]
+                  and h.get('content-range') == f'bytes 100-199/{pdf.stat().st_size}', f'{st} {h.get("content-range")}')
+        check('nada fuera del aula, materiales/ y videos/ (tds/terminal.py → 404)', get(port, '/tds/terminal.py')[0] == 404)
+        check('no se sale de su carpeta (/materiales/../ESTADO.md y %2e%2e → 404)',
+              get(port, '/materiales/../ESTADO.md')[0] == 404 and get(port, '/materiales/%2e%2e/ESTADO.md')[0] == 404)
+        check('un sitio que apunta su nombre a 127.0.0.1 (DNS rebinding: Host ajeno) → 403', get(port, '/', host=f'ejemplo.com:{port}')[0] == 403)
+        check('fuera de un Codespace no acepta direcciones de Codespaces', WS(port, origin=f'https://prueba-{port}.app.github.dev').status == 403)
+    finally:
+        bridge.kill()
+    port = free_port()
+    bridge = start(port, {'CODESPACE_NAME': 'prueba', 'GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN': 'app.github.dev'})
+    try:
+        own = f'prueba-{port}.app.github.dev'
+        ws = WS(port, origin=f'https://{own}')
+        check('en un Codespace acepta su propia dirección privada (https://NOMBRE-PUERTO.app.github.dev)', ws.accepted)
+        if ws.accepted:
+            ws.close()
+        check('…pero no la de otro Codespace ni otro puerto', WS(port, origin=f'https://otro-{port}.app.github.dev').status == 403
+              and WS(port, origin=f'https://prueba-{port + 1}.app.github.dev').status == 403)
+        check('…ni otra página web', WS(port, origin='https://andresrubiop.github.io').status == 403)
+        if hub:
+            check('sirve el aula pedida por la dirección del Codespace', get(port, '/', host=own)[0] == 200)
+    finally:
+        bridge.kill()
 
 
 def protocol_tests():
@@ -297,6 +358,11 @@ def replay():
 
 if __name__ == '__main__':
     protocol_tests()
-    if '--no-replay' not in sys.argv:
+    web_tests()
+    if '--no-replay' in sys.argv:
+        pass
+    elif (TDS.parent / 'hub' / 'build.py').exists():
         replay()
+    else:                                   # copia de estudiantes (GitHub): sin el código del aula no hay guiones que repetir
+        print('  · sin hub/build.py (copia de estudiantes): no se repiten los guiones de «▶ Ejecutar»')
     sys.exit(1 if FAIL else 0)
