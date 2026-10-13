@@ -1,0 +1,300 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.190
+Cada segon, la teva màquina
+processa fluxos enormes de dades.
+
+2
+00:00:08.240 --> 00:00:11.860
+Sense cap ensopegada, tot
+sembla perfectament estable.
+
+3
+00:00:12.480 --> 00:00:15.260
+Però de sobte arriba una
+fallada de programari.
+
+4
+00:00:15.640 --> 00:00:19.600
+Un simple controlador de disc intenta accedir
+a una adreça de memòria que no li toca.
+
+5
+00:00:20.000 --> 00:00:23.680
+En alguns sistemes, aquest únic
+error es propaga en cascada.
+
+6
+00:00:23.880 --> 00:00:27.760
+Tota la màquina es congela i
+l’única opció és un reinici forçat.
+
+7
+00:00:28.140 --> 00:00:32.290
+En altres sistemes, aquest mateix controlador
+defectuós queda aïllat a l’instant.
+
+8
+00:00:32.340 --> 00:00:36.850
+Es reinicia discretament en segon pla,
+i la màquina continua com si res no
+
+9
+00:00:36.900 --> 00:00:40.660
+hagués passat. La diferència
+és la frontera de privilegis.
+
+10
+00:00:41.000 --> 00:00:45.410
+És la línia estricta que separa el
+mode usuari, a dalt, del mode nucli, a
+
+11
+00:00:45.460 --> 00:00:50.550
+baix. Que un sistema operatiu sobrevisqui
+a una fallada depèn del tot de quina part
+
+12
+00:00:50.600 --> 00:00:54.160
+del seu programari pot creuar
+aquesta frontera cap al mode nucli.
+
+13
+00:00:54.500 --> 00:00:58.890
+Primer, l’arquitectura
+monolítica, la de Linux i els BSD.
+
+14
+00:00:59.350 --> 00:01:03.860
+Aquí, tots els serveis centrals, el planificador,
+la gestió de memòria, els sistemes de fitxers i
+
+15
+00:01:03.910 --> 00:01:06.490
+els controladors, s’agrupen en mode nucli.
+
+16
+00:01:06.870 --> 00:01:09.190
+Aquest disseny és
+extraordinàriament ràpid.
+
+17
+00:01:09.410 --> 00:01:13.640
+Una aplicació només necessita una crida
+al sistema: un sol pas d’anada i un sol
+
+18
+00:01:13.690 --> 00:01:18.800
+de tornada. Però com que tot comparteix el
+mode nucli, un error en un sol controlador
+
+19
+00:01:18.850 --> 00:01:22.650
+pot corrompre l’espai de memòria
+comú i fer caure tot el sistema.
+
+20
+00:01:23.350 --> 00:01:25.800
+Linux és monolític, però modular.
+
+21
+00:01:25.850 --> 00:01:31.480
+Aquesta sortida d’ordre, a la màquina
+del curs, mostra 258 mòduls carregats:
+
+22
+00:01:31.530 --> 00:01:34.250
+controladors que el sistema
+pot afegir o treure en calent.
+
+23
+00:01:34.690 --> 00:01:40.450
+Després tenim el micronucli, que fan
+servir sistemes com seL4, QNX i MINIX 3.
+
+24
+00:01:40.750 --> 00:01:46.150
+Aquest disseny puja al mode usuari la majoria dels
+serveis, com els sistemes de fitxers i els controladors.
+
+25
+00:01:46.430 --> 00:01:49.410
+Només el mínim imprescindible queda
+sota la frontera de privilegis.
+
+26
+00:01:49.570 --> 00:01:51.490
+Això dona un aïllament estricte.
+
+27
+00:01:51.710 --> 00:01:54.880
+Si un controlador falla en mode usuari,
+el sistema simplement el reinicia.
+
+28
+00:01:54.930 --> 00:01:57.290
+El nucli mateix no es toca mai.
+
+29
+00:01:57.630 --> 00:01:59.250
+El preu és el rendiment.
+
+30
+00:01:59.910 --> 00:02:02.960
+Ara cada operació necessita més missatges
+i passos de frontera per fer la mateixa
+
+31
+00:02:03.010 --> 00:02:08.190
+feina. També hi ha un enfocament
+híbrid, el de Windows NT i macOS.
+
+32
+00:02:08.610 --> 00:02:13.500
+És un compromís: manté la majoria dels serveis
+en mode nucli, però en passa alguns a l’espai
+
+33
+00:02:13.550 --> 00:02:16.710
+d’usuari, i n’hereta els
+avantatges i els problemes.
+
+34
+00:02:17.370 --> 00:02:21.540
+Decidir què s’executa en mode nucli és una
+elecció d’enginyeria estricta, entre la velocitat
+
+35
+00:02:21.590 --> 00:02:24.410
+d’execució en brut i la
+resiliència de l’aïllament.
+
+36
+00:02:24.990 --> 00:02:30.200
+Llavors, com es carreguen exactament en memòria
+aquestes arquitectures de nucli tan complexes des
+
+37
+00:02:30.250 --> 00:02:32.770
+d’una màquina completament apagada?
+
+38
+00:02:33.250 --> 00:02:35.050
+Passa en quatre etapes.
+
+39
+00:02:35.570 --> 00:02:37.880
+Primer, el microprogramari UEFI.
+
+40
+00:02:37.930 --> 00:02:42.320
+Prova el maquinari, inicialitza la
+memòria i els busos, i busca a la seva
+
+41
+00:02:42.370 --> 00:02:44.330
+memòria no volàtil les
+instruccions d’arrencada.
+
+42
+00:02:44.690 --> 00:02:48.380
+Després, el carregador d’arrencada,
+com GRUB o systemd-boot.
+
+43
+00:02:48.430 --> 00:02:54.350
+Agafa el nucli, anomenat vmlinuz, i un
+sistema de fitxers inicial anomenat initramfs,
+
+44
+00:02:54.430 --> 00:02:55.930
+i els carrega en memòria.
+
+45
+00:02:56.510 --> 00:03:01.200
+L’etapa 3 és el nucli. Es descomprimeix,
+configura la memòria virtual, detecta els
+
+46
+00:03:01.250 --> 00:03:05.250
+processadors i llança el primer
+procés de tots, el PID 1.
+
+47
+00:03:05.750 --> 00:03:11.300
+Finalment, l’espai d’usuari. El procés systemd,
+que funciona com a PID 1, arrenca tots els
+
+48
+00:03:11.350 --> 00:03:14.890
+serveis restants en paral·lel fins que
+arribes a la pantalla d’inici de sessió.
+
+49
+00:03:15.070 --> 00:03:17.440
+Tots els altres processos
+descendeixen d’aquest únic node.
+
+50
+00:03:17.490 --> 00:03:22.000
+Podem mesurar exactament quant dura
+tota l’arrencada a la màquina del
+
+51
+00:03:22.050 --> 00:03:25.170
+curs amb l’ordre systemd-analyze.
+
+52
+00:03:25.390 --> 00:03:27.330
+Aquest gràfic mostra el
+repartiment del temps.
+
+53
+00:03:27.610 --> 00:03:33.340
+El microprogramari va trigar 9,1 segons, el
+carregador 4,9 segons i l’espai d’usuari 14,5
+
+54
+00:03:33.390 --> 00:03:37.570
+segons. L’etapa del nucli
+només va trigar 2,6 segons.
+
+55
+00:03:37.990 --> 00:03:42.210
+Tot i ser el component més complex
+i crític de tota l’arquitectura,
+
+56
+00:03:42.490 --> 00:03:45.440
+carregar el nucli és, de fet,
+l’etapa més ràpida de l’arrencada.
+
+57
+00:03:45.490 --> 00:03:50.280
+La resiliència d’un sistema operatiu la
+defineix la seva arquitectura, i posar-lo en
+
+58
+00:03:50.330 --> 00:03:54.310
+marxa exigeix un relleu precís,
+en quatre passos successius.
+
+59
+00:03:54.950 --> 00:03:59.380
+Repassem. En quina arquitectura de nucli
+un controlador que falla fa caure tot el
+
+60
+00:03:59.430 --> 00:04:02.470
+sistema? En l’arquitectura monolítica.
+
+61
+00:04:03.110 --> 00:04:06.890
+Pregunta 2: quina etapa de l’arrencada
+és la més curta a la màquina del curs?
+
+62
+00:04:07.330 --> 00:04:14.850
+El nucli. Ara obre les animacions A1.2
+i A1.3 a l’aula i fes el laboratori TD0.

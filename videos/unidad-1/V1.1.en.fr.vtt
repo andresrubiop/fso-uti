@@ -1,0 +1,271 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.480
+Vous ouvrez un terminal, tapez une
+commande et appuyez sur Entrée.
+
+2
+00:00:06.700 --> 00:00:12.290
+Cela paraît simple, mais les programmes de haut
+niveau comme Bash ignorent tout de la réalité
+
+3
+00:00:12.340 --> 00:00:17.410
+physique. Ils ne savent pas ce qu’est un
+secteur de disque ni comment manipuler les
+
+4
+00:00:17.460 --> 00:00:20.420
+signaux électriques précis
+qui allument votre écran.
+
+5
+00:00:20.800 --> 00:00:25.170
+Si chaque programme envoyait directement au
+matériel des signaux électriques concurrents
+
+6
+00:00:25.220 --> 00:00:29.280
+en même temps, ce serait aussitôt
+le conflit et la panne du système.
+
+7
+00:00:29.400 --> 00:00:34.680
+Pour éviter ce chaos, un intermédiaire strict
+intervient : le système d’exploitation.
+
+8
+00:00:35.080 --> 00:00:39.110
+Sans ce gestionnaire silencieux, un
+ordinateur n’est qu’un assemblage instable de
+
+9
+00:00:39.160 --> 00:00:44.340
+composants électroniques. Le système
+d’exploitation en fait un outil fiable.
+
+10
+00:00:44.600 --> 00:00:47.140
+Le système d’exploitation a
+deux missions principales.
+
+11
+00:00:47.400 --> 00:00:49.420
+La première est de gérer les ressources.
+
+12
+00:00:49.680 --> 00:00:52.800
+Il répartit le temps CPU,
+la mémoire et l’énergie.
+
+13
+00:00:53.000 --> 00:00:57.920
+Quand plusieurs programmes réclament la même
+ressource au même moment, il joue l’arbitre
+
+14
+00:00:58.120 --> 00:01:00.000
+et résout activement les conflits.
+
+15
+00:01:00.500 --> 00:01:04.040
+La seconde mission est d’offrir
+une machine plus facile à utiliser.
+
+16
+00:01:04.260 --> 00:01:07.850
+Au lieu d’obliger les programmeurs à
+manipuler les interruptions matérielles ou les
+
+17
+00:01:07.900 --> 00:01:13.620
+registres bruts des contrôleurs, il offre des
+abstractions claires : processus, fichiers et sockets.
+
+18
+00:01:13.900 --> 00:01:18.610
+Il remplace ainsi une machine physique
+d’une complexité impossible par une toile
+
+19
+00:01:18.660 --> 00:01:23.890
+organisée et programmable. Pour voir comment
+une commande atteint le matériel, il faut
+
+20
+00:01:23.940 --> 00:01:25.780
+parcourir le système de haut en bas.
+
+21
+00:01:25.880 --> 00:01:28.260
+Le voyage commence par les
+deux couches supérieures.
+
+22
+00:01:28.900 --> 00:01:32.490
+Les applications, où vivent vos programmes
+et Bash, juste au-dessus des bibliothèques
+
+23
+00:01:32.540 --> 00:01:38.010
+système, comme glibc. Ensemble, ces deux couches
+s’exécutent dans ce qu’on appelle le mode
+
+24
+00:01:38.060 --> 00:01:41.460
+utilisateur. En mode utilisateur, les
+bibliothèques ont une certaine liberté.
+
+25
+00:01:41.540 --> 00:01:45.850
+Elles peuvent faire seules des tâches simples,
+comme rassembler du texte dans un tampon
+
+26
+00:01:45.900 --> 00:01:50.950
+local. Mais dès qu’un programme doit
+écrire physiquement à l’écran ou demander
+
+27
+00:01:51.000 --> 00:01:53.110
+plus de mémoire, il se
+heurte à une limite stricte.
+
+28
+00:01:53.160 --> 00:01:55.720
+Cette ligne de partage est
+la frontière de privilèges.
+
+29
+00:01:55.860 --> 00:02:00.020
+La seule façon autorisée de la
+franchir est un appel système.
+
+30
+00:02:00.200 --> 00:02:04.770
+En confinant les applications au-dessus de cette
+ligne et en les privant de tout accès direct
+
+31
+00:02:04.820 --> 00:02:10.020
+au matériel, le système établit le périmètre strict
+où commencent tous les contrôles de sécurité.
+
+32
+00:02:10.480 --> 00:02:14.850
+Une fois l’appel système lancé, la commande
+descend sous la frontière et entre en mode
+
+33
+00:02:14.900 --> 00:02:18.320
+noyau. Là, le noyau
+prend le contrôle absolu.
+
+34
+00:02:18.880 --> 00:02:22.540
+Point essentiel : le noyau n’est pas
+un processus, et ce n’est pas root.
+
+35
+00:02:22.740 --> 00:02:25.420
+C’est le logiciel central
+qui gère le système.
+
+36
+00:02:25.740 --> 00:02:30.190
+Il assure une protection active : il applique
+les permissions des fichiers et garantit que
+
+37
+00:02:30.240 --> 00:02:33.020
+les programmes ne peuvent en aucun cas
+lire la mémoire les uns des autres.
+
+38
+00:02:33.620 --> 00:02:38.450
+Les sous-systèmes du noyau, comme l’ordonnanceur
+et le gestionnaire de mémoire, traitent la requête
+
+39
+00:02:38.500 --> 00:02:41.580
+et la transmettent à la couche
+suivante : les pilotes.
+
+40
+00:02:42.260 --> 00:02:46.130
+Enfin, la commande atteint la couche
+matérielle, tout en bas, où l’action physique
+
+41
+00:02:46.180 --> 00:02:52.030
+s’exécute. Cette séquence obligatoire, de haut
+en bas, garantit à la fois le fonctionnement
+
+42
+00:02:52.080 --> 00:02:54.380
+et une sécurité stricte
+dans tout le système.
+
+43
+00:02:55.060 --> 00:02:59.140
+Cette architecture en couches va
+bien au-delà d’un simple portable.
+
+44
+00:02:59.420 --> 00:03:02.540
+Dans les centres de données et
+les superordinateurs, elle domine.
+
+45
+00:03:02.880 --> 00:03:08.020
+Depuis novembre 2017, toutes les machines
+de la liste TOP500 tournent sous Linux.
+
+46
+00:03:08.300 --> 00:03:09.860
+Elle est aussi dans votre poche.
+
+47
+00:03:10.240 --> 00:03:14.740
+Les téléphones Android utilisent le
+noyau Linux, et iOS le noyau XNU.
+
+48
+00:03:15.280 --> 00:03:19.630
+Même les voitures et les appareils médicaux
+reposent sur ce modèle, souvent avec des
+
+49
+00:03:19.680 --> 00:03:23.540
+micronoyaux temps réel comme QNX, pour garantir
+une synchronisation et une sûreté exactes.
+
+50
+00:03:24.200 --> 00:03:29.060
+Sur tous ces appareils, le système
+d’exploitation est le traducteur invisible
+
+51
+00:03:29.160 --> 00:03:33.300
+qui relie sans heurt l’intention humaine
+et la puissance électrique brute.
+
+52
+00:03:33.780 --> 00:03:38.280
+Récapitulons. Question un : quelles deux
+couches s’exécutent en mode utilisateur ?
+
+53
+00:03:40.360 --> 00:03:42.060
+Les applications et les bibliothèques.
+
+54
+00:03:42.660 --> 00:03:46.540
+Question deux : quelle est la seule façon
+de franchir la frontière de privilèges ?
+
+55
+00:03:48.560 --> 00:03:54.680
+Un appel système. Ouvrez maintenant l’animation A1.1
+dans le cours en ligne et faites le laboratoire TD0.

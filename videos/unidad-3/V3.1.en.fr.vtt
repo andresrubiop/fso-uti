@@ -1,0 +1,245 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.240
+Sous Linux, une philosophie de conception
+unifie tout : tout est fichier.
+
+2
+00:00:08.700 --> 00:00:13.330
+Le système d’exploitation utilise exactement
+la même interface, qu’il s’agisse d’un fichier
+
+3
+00:00:13.380 --> 00:00:20.360
+ordinaire, d’un répertoire, d’un périphérique caractère
+ou bloc, d’un tube, d’une FIFO ou d’un socket.
+
+4
+00:00:20.960 --> 00:00:25.790
+En tant qu’utilisateurs, nous manipulons tous
+ces éléments par des noms familiers et lisibles,
+
+5
+00:00:25.840 --> 00:00:31.630
+comme notas.txt. Mais si vous regardez dans la
+structure de métadonnées centrale de n’importe quel
+
+6
+00:00:31.680 --> 00:00:37.310
+fichier, l’inode, vous remarquerez une absence
+surprenante : le nom du fichier n’y figure
+
+7
+00:00:37.360 --> 00:00:42.470
+nulle part. Si le fichier ne contient
+pas son propre nom, où vit exactement
+
+8
+00:00:42.520 --> 00:00:47.230
+ce texte ? Et comment le noyau trouve-t-il
+les données physiques sur le disque quand
+
+9
+00:00:47.280 --> 00:00:52.750
+vous les demandez ? Pour le noyau, la
+véritable identité d’un fichier est son inode,
+
+10
+00:00:52.800 --> 00:00:55.140
+reconnu uniquement par un numéro unique.
+
+11
+00:00:55.660 --> 00:00:59.900
+Les systèmes Unix séparent délibérément le
+contenu d’un fichier de ses métadonnées.
+
+12
+00:01:00.780 --> 00:01:05.680
+Dans l’inode, le noyau stocke le type
+de fichier, les permissions d’accès,
+
+13
+00:01:05.820 --> 00:01:12.020
+le propriétaire, la taille totale et quatre horodatages
+: accès, modification, changement et création.
+
+14
+00:01:12.580 --> 00:01:15.080
+Remarquez qu’aucun champ
+n’est réservé au nom.
+
+15
+00:01:15.520 --> 00:01:20.290
+L’inode contient aussi des extents : des pointeurs
+qui indiquent au système de fichiers exactement
+
+16
+00:01:20.340 --> 00:01:25.210
+où se trouvent les suites contiguës de
+blocs de 4 kilo-octets sur la partition ext4
+
+17
+00:01:25.260 --> 00:01:29.820
+du disque. Le nom manquant vit
+en réalité dans un répertoire.
+
+18
+00:01:30.040 --> 00:01:34.290
+Un répertoire est simplement un autre fichier,
+mais ses données forment une liste de noms
+
+19
+00:01:34.340 --> 00:01:37.180
+de texte, chacun associé
+à son numéro d’inode.
+
+20
+00:01:37.360 --> 00:01:42.310
+Il contient aussi une entrée pour lui-même, notée
+par un point, et une pour son parent, notée par
+
+21
+00:01:42.360 --> 00:01:47.230
+deux points. Un répertoire n’est qu’une table
+de correspondance : il traduit des chaînes
+
+22
+00:01:47.280 --> 00:01:51.310
+lisibles par les humains en numéros d’inode
+dont le noyau a besoin pour récupérer vos
+
+23
+00:01:51.360 --> 00:01:56.370
+données. Suivons les étapes exactes du
+noyau pour résoudre un chemin absolu,
+
+24
+00:01:56.420 --> 00:01:59.760
+comme /home/student/notas.txt.
+
+25
+00:02:00.360 --> 00:02:02.590
+Le processus commence à l’inode racine.
+
+26
+00:02:02.640 --> 00:02:06.830
+Le noyau lit la table de ce répertoire,
+parcourt les entrées et cherche
+
+27
+00:02:06.880 --> 00:02:09.160
+le numéro d’inode de la chaîne home.
+
+28
+00:02:10.200 --> 00:02:15.090
+Il passe ensuite à l’inode de home, lit
+sa table de répertoire et trouve l’entrée
+
+29
+00:02:15.140 --> 00:02:20.460
+student. Dans l’inode de student,
+le noyau lit une dernière table.
+
+30
+00:02:20.680 --> 00:02:25.740
+Il y trouve notas.txt et en
+extrait le numéro d’inode cible.
+
+31
+00:02:26.120 --> 00:02:30.670
+Ce parcours composant par composant est
+le pont obligatoire entre l’abstraction
+
+32
+00:02:30.720 --> 00:02:34.740
+d’un chemin en espace utilisateur
+et la réalité physique du disque.
+
+33
+00:02:35.100 --> 00:02:39.370
+Comme le nom est totalement détaché
+des données physiques, un même fichier
+
+34
+00:02:39.420 --> 00:02:41.680
+peut avoir plusieurs noms indépendants.
+
+35
+00:02:41.840 --> 00:02:47.420
+C’est un lien physique : une nouvelle entrée
+de répertoire qui pointe vers le même inode.
+
+36
+00:02:47.500 --> 00:02:52.460
+L’inode compte combien de noms pointent
+vers lui avec le compteur st_nlink.
+
+37
+00:02:52.600 --> 00:02:56.750
+Le noyau ne libère les blocs de données que
+lorsqu’il tombe à zéro et qu’aucun processus n’a
+
+38
+00:02:56.800 --> 00:02:59.960
+le fichier ouvert. Un lien
+symbolique fonctionne autrement.
+
+39
+00:03:00.300 --> 00:03:04.730
+Comme le montre cette sortie du terminal, un lien
+symbolique est un inode entièrement nouveau.
+
+40
+00:03:04.780 --> 00:03:10.070
+La sortie montre qu’atajo a
+un numéro d’inode distinct,
+
+41
+00:03:10.120 --> 00:03:16.240
+12190687, différent de celui
+du fichier original, 12190686.
+
+42
+00:03:16.960 --> 00:03:20.500
+Son contenu n’est qu’un chemin
+texte qui pointe ailleurs.
+
+43
+00:03:21.140 --> 00:03:25.750
+Le système de fichiers de Linux n’est pas un
+ensemble rigide de dossiers, mais un réseau souple
+
+44
+00:03:25.800 --> 00:03:29.840
+de pointeurs qui relient des noms
+lisibles à des identités physiques.
+
+45
+00:03:30.320 --> 00:03:33.620
+Récapitulons. Un inode
+contient-il le nom du fichier ?
+
+46
+00:03:35.700 --> 00:03:39.500
+Non, le nom vit dans l’entrée de
+répertoire, qui pointe vers l’inode.
+
+47
+00:03:39.920 --> 00:03:43.000
+Quelle est la différence entre un
+lien physique et un lien symbolique ?
+
+48
+00:03:45.120 --> 00:03:49.650
+Un lien physique pointe directement vers le
+même inode ; un lien symbolique est un inode
+
+49
+00:03:49.700 --> 00:03:51.330
+distinct dont le contenu est un chemin.
+
+50
+00:03:51.380 --> 00:03:57.040
+Ouvrez maintenant l’animation A3.1 dans le
+cours en ligne et faites le laboratoire TD2.

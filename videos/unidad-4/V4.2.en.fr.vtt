@@ -1,0 +1,320 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.510
+Imaginez que vous écrivez deux programmes, les
+lancez côte à côte et leur demandez de regarder
+
+2
+00:00:07.560 --> 00:00:09.480
+exactement la même adresse mémoire.
+
+3
+00:00:09.680 --> 00:00:12.220
+Vous vous attendriez à ce qu’ils
+trouvent les mêmes données.
+
+4
+00:00:12.380 --> 00:00:15.550
+Mais sur un système d’exploitation
+moderne, ce n’est pas le cas.
+
+5
+00:00:15.600 --> 00:00:17.600
+Ils trouvent des valeurs
+complètement différentes.
+
+6
+00:00:18.140 --> 00:00:21.700
+Cela vient d’une tromperie fondamentale
+du système d’exploitation.
+
+7
+00:00:22.240 --> 00:00:27.090
+Sur une machine Linux x86-64, le
+système ment à chaque processus.
+
+8
+00:00:27.140 --> 00:00:32.010
+Il donne à chaque programme l’illusion
+de tourner seul, dans un immense
+
+9
+00:00:32.060 --> 00:00:35.480
+espace d’adressage
+privé de 256 téraoctets.
+
+10
+00:00:36.020 --> 00:00:40.390
+Cette sortie du terminal, issue du laboratoire
+du cours, montre comment un processus divise cet
+
+11
+00:00:40.440 --> 00:00:45.570
+espace privé. On voit des zones distinctes
+pour le code, les données initialisées, le
+
+12
+00:00:45.620 --> 00:00:50.390
+tas pour les petites demandes de mémoire, les
+régions mmap pour les grandes et la pile pour
+
+13
+00:00:50.440 --> 00:00:53.790
+les variables locales. Mais ces
+adresses sont strictement virtuelles.
+
+14
+00:00:53.840 --> 00:00:57.680
+Elles ne pointent pas directement vers les
+puces de RAM physique de votre carte mère.
+
+15
+00:00:58.680 --> 00:01:03.110
+En donnant à chaque programme son propre système
+de coordonnées fictif, le noyau les isole
+
+16
+00:01:03.160 --> 00:01:08.250
+parfaitement. Aucun programme ne peut écraser
+par accident les données d’un autre, car ils ne
+
+17
+00:01:08.300 --> 00:01:10.280
+parlent même pas le même langage physique.
+
+18
+00:01:10.860 --> 00:01:15.610
+Pour combler l’écart, la mémoire virtuelle est
+découpée en morceaux appelés pages, de exactement
+
+19
+00:01:15.660 --> 00:01:21.980
+4096 octets chacune. La RAM physique est
+divisée en cadres de 4096 octets correspondants.
+
+20
+00:01:22.160 --> 00:01:26.210
+Une table des pages du noyau, aidée par
+l’unité de gestion de la mémoire du matériel et
+
+21
+00:01:26.260 --> 00:01:31.280
+par le cache TLB, envoie chaque page
+virtuelle vers un cadre physique précis.
+
+22
+00:01:31.700 --> 00:01:35.070
+Quand un programme utilise une page virtuelle
+qui n’a pas encore de cadre physique
+
+23
+00:01:35.120 --> 00:01:37.700
+attribué, le matériel
+suspend le processus.
+
+24
+00:01:37.860 --> 00:01:41.580
+Il déclenche ce qu’on appelle un
+défaut de page et saute dans le noyau.
+
+25
+00:01:42.000 --> 00:01:46.570
+Le noyau prend alors un cadre physique libre,
+le met à zéro, met à jour la table des pages
+
+26
+00:01:46.620 --> 00:01:48.040
+et relance l’instruction.
+
+27
+00:01:48.340 --> 00:01:50.270
+C’est l’allocation paresseuse.
+
+28
+00:01:50.320 --> 00:01:54.390
+Le système ne dépense de mémoire physique
+qu’au moment exact où le programme
+
+29
+00:01:54.440 --> 00:01:59.210
+la touche. Cette couche de traduction stricte,
+assistée par le matériel, fait fonctionner toute
+
+30
+00:01:59.260 --> 00:02:04.170
+l’illusion. Comme le noyau contrôle les
+traductions, un processus est physiquement
+
+31
+00:02:04.220 --> 00:02:06.180
+enfermé dans ses propres pages.
+
+32
+00:02:06.760 --> 00:02:11.690
+Alors, que devient cet immense espace
+d’adressage quand un processus doit
+
+33
+00:02:11.740 --> 00:02:14.460
+se cloner avec l’appel système fork ?
+
+34
+00:02:15.040 --> 00:02:18.100
+Copier physiquement toutes ces
+données serait terriblement lent.
+
+35
+00:02:18.570 --> 00:02:20.380
+Mais regardez cette sortie du laboratoire.
+
+36
+00:02:20.920 --> 00:02:27.060
+Cloner un processus de 256 mégaoctets sur la
+machine du cours n’a pris que 6,70 millisecondes.
+
+37
+00:02:27.340 --> 00:02:31.400
+Une telle vitesse serait physiquement
+impossible si la RAM était vraiment dupliquée.
+
+38
+00:02:31.600 --> 00:02:35.020
+Le système y arrive grâce à une
+astuce appelée copie sur écriture.
+
+39
+00:02:35.380 --> 00:02:39.780
+Au lieu de copier la mémoire réelle, le
+noyau ne copie que les tables des pages.
+
+40
+00:02:39.900 --> 00:02:45.060
+Il fait pointer les deux processus vers les
+mêmes cadres physiques, marqués en lecture seule.
+
+41
+00:02:45.200 --> 00:02:49.930
+Si l’un modifie les données, le noyau intercepte
+l’écriture, duplique cette page précise
+
+42
+00:02:49.980 --> 00:02:53.860
+de 4096 octets et laisse
+le programme continuer.
+
+43
+00:02:54.060 --> 00:02:58.160
+Cela ne coûte que 2753
+nanosecondes par défaut.
+
+44
+00:02:58.540 --> 00:03:02.850
+La copie sur écriture transforme une duplication
+massive de mémoire en une opération paresseuse,
+
+45
+00:03:02.900 --> 00:03:07.510
+à la demande. Elle économise du temps et de la RAM,
+tout en gardant intacte l’illusion d’une mémoire
+
+46
+00:03:07.560 --> 00:03:11.790
+isolée. Mais un clonage aussi absolu
+a un effet secondaire étrange.
+
+47
+00:03:11.840 --> 00:03:16.650
+Si vous utilisez une fonction comme printf
+juste avant d’appeler fork, votre texte peut
+
+48
+00:03:16.700 --> 00:03:19.760
+s’afficher deux fois à l’écran, comme
+dans cette sortie du laboratoire.
+
+49
+00:03:20.020 --> 00:03:22.740
+La bibliothèque C n’écrit
+pas le texte immédiatement.
+
+50
+00:03:22.860 --> 00:03:27.220
+Elle l’accumule dans un tampon interne, dans
+la mémoire du processus en mode utilisateur.
+
+51
+00:03:27.400 --> 00:03:32.050
+Quand fork s’exécute, il copie parfaitement
+tout l’espace mémoire, y compris ce
+
+52
+00:03:32.100 --> 00:03:37.270
+tampon non vidé. Le parent et l’enfant
+ont maintenant le même texte en attente en
+
+53
+00:03:37.320 --> 00:03:41.850
+mémoire. Quand les deux processus se terminent et
+appellent la fonction exit de la bibliothèque, tous deux
+
+54
+00:03:41.900 --> 00:03:44.880
+vident leurs tampons à l’écran,
+et la ligne s’affiche deux fois.
+
+55
+00:03:45.180 --> 00:03:48.910
+Si le parent avait plutôt appelé
+l’appel système _exit, il aurait
+
+56
+00:03:48.960 --> 00:03:51.240
+sauté le vidage et évité le doublon.
+
+57
+00:03:51.520 --> 00:03:54.600
+Le dévouement du système
+à l’illusion est absolu.
+
+58
+00:03:54.780 --> 00:03:59.350
+Le noyau veille à cloner parfaitement
+chaque octet du processus, même
+
+59
+00:03:59.400 --> 00:04:02.120
+ses erreurs en tampon. Récapitulons.
+
+60
+00:04:02.240 --> 00:04:07.380
+Question un : pourquoi fork est-il si
+rapide, même pour un gros processus ?
+
+61
+00:04:07.800 --> 00:04:13.420
+Grâce à la copie sur écriture. Il ne copie que
+les tables des pages, pas la mémoire physique.
+
+62
+00:04:14.140 --> 00:04:19.360
+Question deux : pourquoi un texte affiché
+peut-il apparaître deux fois après fork ?
+
+63
+00:04:19.820 --> 00:04:25.030
+Parce que le tampon de la bibliothèque C est
+dans la mémoire du processus, et fork copie
+
+64
+00:04:25.080 --> 00:04:27.020
+le tampon non vidé vers l’enfant.
+
+65
+00:04:27.380 --> 00:04:34.250
+Ouvrez maintenant les animations A4.1, A4.2
+et A4.6 dans le cours en ligne et faites
+
+66
+00:04:34.300 --> 00:04:36.020
+le laboratoire TD3.

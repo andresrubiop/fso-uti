@@ -1,0 +1,269 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.480
+Obres un terminal, escrius
+una ordre i prems Retorn.
+
+2
+00:00:06.700 --> 00:00:12.290
+Sembla senzill, però els programes d’alt
+nivell com Bash no veuen gens la realitat
+
+3
+00:00:12.340 --> 00:00:17.410
+física. No saben què és un sector
+de disc ni com manipular els
+
+4
+00:00:17.460 --> 00:00:20.420
+senyals elèctrics concrets
+que encenen la teva pantalla.
+
+5
+00:00:20.800 --> 00:00:25.170
+Si cada programa intentés enviar directament
+al maquinari senyals elèctrics en competència
+
+6
+00:00:25.220 --> 00:00:29.280
+alhora, el resultat seria un conflicte
+immediat i la fallada del sistema.
+
+7
+00:00:29.400 --> 00:00:34.680
+Per evitar aquest caos, hi intervé un
+intermediari estricte: el sistema operatiu.
+
+8
+00:00:35.080 --> 00:00:39.110
+Sense aquest gestor silenciós, un
+ordinador és només un conjunt inestable de
+
+9
+00:00:39.160 --> 00:00:44.340
+components electrònics. El sistema
+operatiu el converteix en una eina fiable.
+
+10
+00:00:44.600 --> 00:00:47.140
+El sistema operatiu té
+dues missions principals.
+
+11
+00:00:47.400 --> 00:00:49.420
+La primera és gestionar els recursos.
+
+12
+00:00:49.680 --> 00:00:52.800
+Reparteix el temps de CPU,
+la memòria i l’energia.
+
+13
+00:00:53.000 --> 00:00:57.920
+Quan diversos programes demanen el
+mateix recurs alhora, fa d’àrbitre
+
+14
+00:00:58.120 --> 00:01:00.000
+i resol activament els conflictes.
+
+15
+00:01:00.500 --> 00:01:04.040
+La segona missió és oferir
+una màquina més fàcil d’usar.
+
+16
+00:01:04.260 --> 00:01:07.850
+En lloc d’obligar els programadors a lluitar
+amb interrupcions de maquinari o amb els
+
+17
+00:01:07.900 --> 00:01:13.620
+registres en brut dels controladors, ofereix
+abstraccions netes: processos, fitxers i sòcols.
+
+18
+00:01:13.900 --> 00:01:18.610
+Així, substitueix una màquina física
+d’una complexitat impossible per un llenç
+
+19
+00:01:18.660 --> 00:01:23.890
+organitzat i programable. Per veure com
+una ordre arriba al maquinari, hem de
+
+20
+00:01:23.940 --> 00:01:25.780
+recórrer el sistema de dalt a baix.
+
+21
+00:01:25.880 --> 00:01:28.260
+El viatge comença a les
+dues capes superiors.
+
+22
+00:01:28.900 --> 00:01:32.490
+Les aplicacions, on viuen els teus programes
+i Bash, just a sobre de les biblioteques
+
+23
+00:01:32.540 --> 00:01:38.010
+del sistema, com glibc. Juntes, aquestes
+dues capes funcionen en l’anomenat mode
+
+24
+00:01:38.060 --> 00:01:41.460
+usuari. En mode usuari, les
+biblioteques tenen certa llibertat.
+
+25
+00:01:41.540 --> 00:01:45.850
+Poden fer soles tasques senzilles, com
+reunir text en una memòria intermèdia
+
+26
+00:01:45.900 --> 00:01:50.950
+local. Però quan un programa ha d’escriure
+físicament a la pantalla o demanar
+
+27
+00:01:51.000 --> 00:01:53.110
+més memòria, topa amb un límit estricte.
+
+28
+00:01:53.160 --> 00:01:55.720
+Aquesta línia divisòria és
+la frontera de privilegis.
+
+29
+00:01:55.860 --> 00:02:00.020
+L’única manera autoritzada de
+creuar-la és fer una crida al sistema.
+
+30
+00:02:00.200 --> 00:02:04.770
+Tancant les aplicacions per sobre d’aquesta
+línia i traient-los l’accés directe
+
+31
+00:02:04.820 --> 00:02:10.020
+al maquinari, el sistema estableix el perímetre
+estricte on comencen tots els controls de seguretat.
+
+32
+00:02:10.480 --> 00:02:14.850
+Un cop feta la crida al sistema, l’ordre
+baixa sota la frontera i entra en mode
+
+33
+00:02:14.900 --> 00:02:18.320
+nucli. Aquí, el nucli
+pren el control absolut.
+
+34
+00:02:18.880 --> 00:02:22.540
+És clau: el nucli no és
+un procés i no és root.
+
+35
+00:02:22.740 --> 00:02:25.420
+És el programari central
+que gestiona el sistema.
+
+36
+00:02:25.740 --> 00:02:30.190
+S’encarrega de la protecció activa: aplica
+els permisos dels fitxers i garanteix que
+
+37
+00:02:30.240 --> 00:02:33.020
+els programes no puguin llegir de
+cap manera la memòria dels altres.
+
+38
+00:02:33.620 --> 00:02:38.450
+Els subsistemes del nucli, com el planificador
+i el gestor de memòria, processen la petició
+
+39
+00:02:38.500 --> 00:02:41.580
+i la passen a la capa
+següent: els controladors.
+
+40
+00:02:42.260 --> 00:02:46.130
+Finalment, l’ordre arriba a la capa de
+maquinari, a baix de tot, on s’executa l’acció
+
+41
+00:02:46.180 --> 00:02:52.030
+física. Aquesta seqüència obligatòria de
+dalt a baix garanteix alhora el funcionament
+
+42
+00:02:52.080 --> 00:02:54.380
+i una seguretat estricta a tot el sistema.
+
+43
+00:02:55.060 --> 00:02:59.140
+Aquesta arquitectura per capes va
+molt més enllà d’un sol portàtil.
+
+44
+00:02:59.420 --> 00:03:02.540
+En centres de dades i
+supercomputadors, domina.
+
+45
+00:03:02.880 --> 00:03:08.020
+Des del novembre del 2017, totes les màquines
+de la llista TOP500 funcionen amb Linux.
+
+46
+00:03:08.300 --> 00:03:09.860
+També és a la teva butxaca.
+
+47
+00:03:10.240 --> 00:03:14.740
+Els telèfons Android fan servir el
+nucli Linux, i iOS el nucli XNU.
+
+48
+00:03:15.280 --> 00:03:19.630
+Fins i tot els cotxes i els aparells mèdics
+es basen en aquest esquema, sovint amb
+
+49
+00:03:19.680 --> 00:03:23.540
+micronuclis de temps real com QNX, que
+garanteixen temps exactes i seguretat.
+
+50
+00:03:24.200 --> 00:03:29.060
+En tots aquests dispositius, el sistema
+operatiu és el traductor invisible
+
+51
+00:03:29.160 --> 00:03:33.300
+que uneix sense friccions la intenció
+humana i la potència elèctrica en brut.
+
+52
+00:03:33.780 --> 00:03:38.280
+Repassem. Pregunta u: quines dues
+capes funcionen en mode usuari?
+
+53
+00:03:40.360 --> 00:03:42.060
+Les aplicacions i les biblioteques.
+
+54
+00:03:42.660 --> 00:03:46.540
+Pregunta dos: quina és l’única manera
+de creuar la frontera de privilegis?
+
+55
+00:03:48.560 --> 00:03:54.680
+Una crida al sistema. Ara obre l’animació
+A1.1 a l’aula i fes el laboratori TD0.

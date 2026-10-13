@@ -1,0 +1,305 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.430
+Quan executes un programa senzill en C en
+una màquina Linux, funciona del tot en mode
+
+2
+00:00:08.480 --> 00:00:13.510
+usuari, o anell 3. És un entorn
+aïllat on el programa no té cap
+
+3
+00:00:13.560 --> 00:00:18.170
+poder. Tot sol, no pot tocar el
+disc, no pot llegir la xarxa i
+
+4
+00:00:18.220 --> 00:00:19.660
+no pot escriure a la pantalla.
+
+5
+00:00:20.040 --> 00:00:24.430
+Per fer alguna cosa útil, com imprimir
+una salutació, un programa ha d’arribar
+
+6
+00:00:24.480 --> 00:00:29.490
+al maquinari. Però el nucli del sistema
+operatiu és sota aquesta frontera, a
+
+7
+00:00:29.540 --> 00:00:32.480
+l’anell 0, com un guarda
+de frontera estricte.
+
+8
+00:00:32.590 --> 00:00:36.350
+Si un programa intenta saltar-se la frontera
+de privilegis i accedir al maquinari
+
+9
+00:00:36.400 --> 00:00:40.750
+directament, el processador llança
+una excepció i el nucli acaba el
+
+10
+00:00:40.800 --> 00:00:45.950
+procés immediatament. Com que l’accés
+directe està blocat, el programa ha de
+
+11
+00:00:46.000 --> 00:00:48.860
+demanar al nucli, de manera
+segura, que faci l’acció per ell.
+
+12
+00:00:49.260 --> 00:00:51.220
+Aquesta petició és una crida al sistema.
+
+13
+00:00:51.560 --> 00:00:55.390
+Quan el teu programa fa servir la funció
+write de C, en realitat crida un embolcall
+
+14
+00:00:55.440 --> 00:00:58.620
+de la biblioteca estàndard de C, glibc.
+
+15
+00:00:58.900 --> 00:01:02.850
+Sota aquest embolcall, ha de seguir una
+convenció rígida del maquinari per creuar la
+
+16
+00:01:02.900 --> 00:01:06.990
+frontera. La veiem a les
+instruccions d’assemblador exactes
+
+17
+00:01:07.040 --> 00:01:10.220
+que fa servir el programa
+per preparar el pas.
+
+18
+00:01:10.540 --> 00:01:14.710
+Aquesta seqüència d’instruccions
+és el protocol innegociable per
+
+19
+00:01:14.760 --> 00:01:17.660
+creuar amb seguretat la frontera
+de privilegis del sistema.
+
+20
+00:01:18.000 --> 00:01:22.190
+Abans de creuar, l’embolcall de
+glibc posa les dades de la petició en
+
+21
+00:01:22.240 --> 00:01:27.740
+registres concrets de la CPU, segons la
+convenció estricta de Linux en x86-64.
+
+22
+00:01:27.920 --> 00:01:31.400
+Primer, el número de
+crida va al registre RAX.
+
+23
+00:01:31.520 --> 00:01:35.400
+Aquí, l’embolcall fa servir el número u
+per indicar la crida al sistema correcta.
+
+24
+00:01:35.600 --> 00:01:40.160
+La resta d’arguments van a RDI, RSI i RDX.
+
+25
+00:01:40.380 --> 00:01:42.350
+Fixa’t en un detall clau de seguretat.
+
+26
+00:01:42.400 --> 00:01:45.480
+El text mateix no viatja
+dins dels registres.
+
+27
+00:01:45.700 --> 00:01:49.960
+El registre RSI només porta l’adreça
+on és el text a la memòria.
+
+28
+00:01:50.160 --> 00:01:54.100
+El moment decisiu arriba quan el
+programa executa la instrucció syscall.
+
+29
+00:01:54.300 --> 00:02:00.300
+Aquesta instrucció obliga la CPU a passar
+a l’instant a mode nucli, a l’anell 0.
+
+30
+00:02:00.780 --> 00:02:05.190
+L’execució salta a una adreça fixa
+que el nucli va configurar durant
+
+31
+00:02:05.240 --> 00:02:11.430
+l’arrencada: entry_SYSCALL_64. El programa
+no controla aquest punt d’arribada.
+
+32
+00:02:11.480 --> 00:02:13.280
+No pot triar on salta.
+
+33
+00:02:13.820 --> 00:02:18.100
+Un cop sota la frontera, el nucli
+pren el control total de la petició.
+
+34
+00:02:18.440 --> 00:02:21.570
+Recorda: el nucli és el
+cor del sistema operatiu.
+
+35
+00:02:21.620 --> 00:02:27.980
+No és un procés. El nucli llegeix el
+registre RAX i el fa servir com a índex.
+
+36
+00:02:28.160 --> 00:02:32.790
+Aquest valor, u, apunta a una fila de la
+taula de crides al sistema, que activa el
+
+37
+00:02:32.840 --> 00:02:35.000
+gestor correcte: ksys_write.
+
+38
+00:02:35.460 --> 00:02:38.060
+El nucli no es refia a
+cegues de la petició.
+
+39
+00:02:38.280 --> 00:02:41.360
+Primer, el gestor valida el
+descriptor de fitxer i els arguments.
+
+40
+00:02:41.760 --> 00:02:47.010
+Després, el nucli fa servir una funció anomenada
+copy_from_user per portar amb seguretat el text
+
+41
+00:02:47.060 --> 00:02:50.120
+des de l’adreça de memòria que ha donat
+el programa, del qual no es refia.
+
+42
+00:02:50.500 --> 00:02:54.930
+Obligant el programa a fer servir una taula
+rígida i llegint ell mateix la memòria, el
+
+43
+00:02:54.980 --> 00:02:58.700
+nucli garanteix que cap codi maliciós
+de l’usuari no el pugui segrestar.
+
+44
+00:02:59.060 --> 00:03:01.920
+Finalment, el controlador
+mostra el text a la pantalla.
+
+45
+00:03:02.520 --> 00:03:06.730
+Acabada la feina del maquinari, el
+viatge acaba tornant el control
+
+46
+00:03:06.780 --> 00:03:11.450
+al programa. El processador executa la
+instrucció sysret, que baixa els privilegis
+
+47
+00:03:11.500 --> 00:03:16.040
+de la CPU i torna l’execució a l’altra
+banda de la frontera, al mode usuari.
+
+48
+00:03:16.220 --> 00:03:20.690
+El resultat numèric de la crida
+al sistema torna al registre
+
+49
+00:03:20.740 --> 00:03:25.310
+RAX. Però com sap el programa si el
+nucli ha tingut un problema, com un
+
+50
+00:03:25.360 --> 00:03:31.330
+descriptor de fitxer no vàlid? Si RAX
+torna amb un valor entre menys 4095 i menys
+
+51
+00:03:31.380 --> 00:03:35.760
+u, l’embolcall de glibc reconeix
+aquest interval com un error.
+
+52
+00:03:36.000 --> 00:03:38.050
+L’embolcall li ho
+simplifica al programador.
+
+53
+00:03:38.100 --> 00:03:42.890
+Canvia el valor retornat per exactament
+menys u i desa el codi d’error real
+
+54
+00:03:42.940 --> 00:03:45.120
+en una variable anomenada errno.
+
+55
+00:03:45.280 --> 00:03:50.290
+Com que cada crida al sistema és un viatge
+complex a través d’una frontera vigilada, pot
+
+56
+00:03:50.340 --> 00:03:56.330
+fallar. Per això els programes del curs
+emboliquen cada crida amb exit_if i
+
+57
+00:03:56.380 --> 00:04:00.600
+fan servir perror per traduir
+errno en un missatge llegible.
+
+58
+00:04:01.220 --> 00:04:06.570
+Repassem. Quina instrucció de la CPU
+passa l’execució de mode usuari a mode
+
+59
+00:04:06.620 --> 00:04:07.360
+nucli?
+
+60
+00:04:10.040 --> 00:04:16.330
+La instrucció syscall. El registre RSI
+porta el text que s’ha d’imprimir o la seva
+
+61
+00:04:16.380 --> 00:04:17.460
+adreça de memòria?
+
+62
+00:04:20.290 --> 00:04:22.170
+Porta l’adreça de memòria.
+
+63
+00:04:22.410 --> 00:04:29.030
+Ara obre l’animació A2.1 a l’aula i
+fes l’exercici u del laboratori TD1.

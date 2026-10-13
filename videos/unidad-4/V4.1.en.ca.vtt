@@ -1,0 +1,270 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:09.040
+Quan obres un terminal de Linux i
+escrius una ordre com ls > out.txt,
+
+2
+00:00:09.240 --> 00:00:12.100
+desencadenes una reacció
+en cadena molt concreta.
+
+3
+00:00:12.440 --> 00:00:16.260
+Per entendre com funciona, primer
+cal definir què és un procés.
+
+4
+00:00:16.540 --> 00:00:20.130
+Un procés és un programa en execució
+juntament amb el seu context.
+
+5
+00:00:20.180 --> 00:00:25.800
+Aquest context inclou la seva memòria, els seus
+registres de CPU i els seus descriptors de fitxer oberts.
+
+6
+00:00:26.120 --> 00:00:28.660
+Aquest diagrama mostra
+l’arquitectura del sistema operatiu.
+
+7
+00:00:28.840 --> 00:00:31.750
+El shell funciona en mode usuari,
+sobre la frontera de privilegis.
+
+8
+00:00:31.800 --> 00:00:37.250
+A sota hi ha el mode nucli. Per executar una
+ordre, el shell baixa a fer la crida al sistema
+
+9
+00:00:37.300 --> 00:00:42.290
+fork, que crea un procés fill: un clon
+exacte, amb la mateixa disposició de memòria
+
+10
+00:00:42.340 --> 00:00:44.180
+i els mateixos descriptors oberts.
+
+11
+00:00:44.640 --> 00:00:47.840
+A Linux, clonar el shell existent
+és el primer pas obligatori.
+
+12
+00:00:47.940 --> 00:00:51.830
+Així delega la nova feina en un procés
+subordinat, mentre el shell original continua
+
+13
+00:00:51.880 --> 00:00:54.220
+en marxa, a punt per acceptar
+la teva ordre següent.
+
+14
+00:00:54.600 --> 00:00:57.950
+Ara podem centrar-nos del
+tot en el procés fill.
+
+15
+00:00:58.000 --> 00:01:03.350
+Abans d’executar l’ordre de llistat,
+ha de resoldre la redirecció
+
+16
+00:01:03.400 --> 00:01:09.280
+> out.txt. Aquest diagrama animat mostra
+com gestiona el fill aquest flux de text.
+
+17
+00:01:09.440 --> 00:01:14.710
+Amb la crida al sistema dup2, el procés fill
+modifica el seu propi context i dirigeix
+
+18
+00:01:14.760 --> 00:01:17.940
+el descriptor de sortida
+directament al fitxer de text.
+
+19
+00:01:18.560 --> 00:01:22.700
+Després arriba una transformació
+crucial amb la crida al sistema execve.
+
+20
+00:01:22.780 --> 00:01:27.270
+El procés fill descarta el codi copiat del
+shell i carrega el codi del programa ls.
+
+21
+00:01:27.320 --> 00:01:31.890
+Fixa’t que el descriptor que apunta al
+fitxer de text es queda exactament on
+
+22
+00:01:31.940 --> 00:01:37.310
+era. Com que execve conserva aquests
+descriptors, el programa ls escriu al
+
+23
+00:01:37.360 --> 00:01:41.220
+fitxer de text automàticament. No necessita
+saber mai que la seva sortida s’ha redirigit.
+
+24
+00:01:41.940 --> 00:01:44.810
+Amb el codi carregat, el
+procés necessita temps de CPU.
+
+25
+00:01:44.860 --> 00:01:49.990
+Passarà per tres estats: a punt, esperant
+la CPU; en execució, executant-se
+
+26
+00:01:50.040 --> 00:01:53.130
+de debò; i blocat, si ha
+d’esperar una E/S de disc.
+
+27
+00:01:53.180 --> 00:01:58.020
+Per compartir la CPU, el sistema
+operatiu fa un canvi de context.
+
+28
+00:01:58.300 --> 00:02:01.830
+Desa els registres del procés en
+execució i carrega els registres
+
+29
+00:02:01.880 --> 00:02:03.710
+desats del següent de la cua.
+
+30
+00:02:03.760 --> 00:02:05.900
+El planificador decideix a qui li toca.
+
+31
+00:02:06.580 --> 00:02:12.950
+A Linux, des de la versió 6.6, el nucli fa
+servir l’algorisme EEVDF, que reparteix la
+
+32
+00:02:13.000 --> 00:02:17.640
+CPU assignant temps virtual, ponderat
+per la prioritat de cada procés.
+
+33
+00:02:18.320 --> 00:02:22.930
+execve garanteix que el teu programa s’executi
+amb els fitxers ben preparats, i els canvis
+
+34
+00:02:22.980 --> 00:02:26.100
+de context ràpids del planificador
+li permeten compartir la CPU.
+
+35
+00:02:26.580 --> 00:02:30.550
+Així la teva ordre redirigida s’executa
+sense entrebancs amb la resta del
+
+36
+00:02:30.600 --> 00:02:35.750
+sistema operatiu. Al final, l’ordre ls
+acaba de llegir el directori i finalitza
+
+37
+00:02:35.800 --> 00:02:39.460
+la seva execució. Però el
+procés no desapareix del tot.
+
+38
+00:02:39.540 --> 00:02:43.270
+El seu bloc de control de procés,
+o PCB, es queda a la memòria.
+
+39
+00:02:43.320 --> 00:02:45.060
+Ara el procés és un zombi.
+
+40
+00:02:45.340 --> 00:02:49.170
+El PCB es conserva perquè el shell pare
+pugui fer la crida al sistema wait.
+
+41
+00:02:49.220 --> 00:02:53.920
+Quan recull l’estat de sortida final,
+el nucli elimina el PCB del zombi.
+
+42
+00:02:54.320 --> 00:02:57.720
+Aquest estat de sortida dona
+detalls exactes de com ha acabat.
+
+43
+00:02:57.880 --> 00:03:02.370
+Diu al pare si el programa ha sortit
+netament o si ha petat, potser per
+
+44
+00:03:02.420 --> 00:03:04.380
+una fallada de pàgina que
+ha disparat un senyal.
+
+45
+00:03:04.600 --> 00:03:08.040
+En aquesta sortida del terminal veus
+un exemple de dades d’una fallada.
+
+46
+00:03:08.160 --> 00:03:13.690
+Un estat de sortida de 139 indica que el
+procés ha mort per una violació de segment,
+
+47
+00:03:13.740 --> 00:03:18.320
+SIGSEGV, que és el senyal 11 sumat a
+128, segons la convenció del shell.
+
+48
+00:03:18.600 --> 00:03:22.340
+Cada ordre que executes segueix
+aquest cicle cronològic estricte.
+
+49
+00:03:22.480 --> 00:03:27.190
+Clona un procés existent, transforma el
+seu codi, comparteix la CPU mitjançant el
+
+50
+00:03:27.240 --> 00:03:30.340
+planificador i acaba informant
+el nucli del seu estat.
+
+51
+00:03:30.720 --> 00:03:35.250
+Repassem. Quina crida al sistema substitueix
+el programa del procés i en conserva els
+
+52
+00:03:35.300 --> 00:03:36.480
+descriptors de fitxer?
+
+53
+00:03:38.520 --> 00:03:43.290
+execve. En quin estat és un procés que ja
+ha acabat però el pare del qual encara no
+
+54
+00:03:43.340 --> 00:03:44.300
+ha cridat wait?
+
+55
+00:03:46.380 --> 00:03:53.720
+Zombi. Ara obre les animacions A4.3 i
+A4.4 a l’aula i fes el laboratori TD3.

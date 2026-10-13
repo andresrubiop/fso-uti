@@ -1,0 +1,277 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.400
+Tenim 32 processos executant-se
+alhora en mode usuari.
+
+2
+00:00:07.580 --> 00:00:12.480
+Tenen una tasca senzilla: registrar el seu
+identificador de procés en un únic comptador compartit.
+
+3
+00:00:12.920 --> 00:00:16.360
+Si tot s’executa com s’espera,
+el compte és senzill.
+
+4
+00:00:16.680 --> 00:00:20.380
+El comptador hauria de pujar sense
+problemes i aturar-se exactament a 32.
+
+5
+00:00:20.860 --> 00:00:25.390
+Però en aquesta sortida del terminal
+del programa shm_race veiem una altra
+
+6
+00:00:25.440 --> 00:00:31.470
+realitat. Els resultats són totalment
+imprevisibles: donen totals com 19, 28 o
+
+7
+00:00:31.520 --> 00:00:34.560
+25. Els programes no peten.
+
+8
+00:00:34.800 --> 00:00:38.960
+El que passa és que els registres
+desapareixen en silenci durant l’execució.
+
+9
+00:00:39.600 --> 00:00:42.420
+Aquests processos es comuniquen
+amb memòria compartida.
+
+10
+00:00:42.540 --> 00:00:46.190
+Escriuen directament en el mateix espai,
+cosa que, com demostren els registres
+
+11
+00:00:46.240 --> 00:00:48.760
+perduts, és molt perillosa.
+
+12
+00:00:49.200 --> 00:00:53.310
+Per resoldre el misteri, primer cal
+veure com els processos se salten
+
+13
+00:00:53.360 --> 00:00:56.680
+el seu propi aïllament
+per compartir memòria.
+
+14
+00:00:56.980 --> 00:01:01.650
+Normalment, el sistema operatiu manté els
+processos totalment aïllats, separats del
+
+15
+00:01:01.700 --> 00:01:03.540
+nucli per la frontera de privilegis.
+
+16
+00:01:03.780 --> 00:01:08.130
+Podem perforar aquest aïllament amb una
+crida al sistema anomenada mmap i l’opció
+
+17
+00:01:08.180 --> 00:01:13.190
+MAP_SHARED. Així dos processos poden mapar un fitxer
+comú, amb les seves pàgines virtuals apuntant
+
+18
+00:01:13.240 --> 00:01:15.500
+al mateix marc físic.
+
+19
+00:01:15.720 --> 00:01:20.310
+El nucli gestiona aquesta memòria física amb
+regles geogràfiques estrictes: la reparteix
+
+20
+00:01:20.360 --> 00:01:23.500
+en pàgines senceres
+d’exactament 4096 bytes.
+
+21
+00:01:23.740 --> 00:01:27.290
+Aquesta sortida del programa
+mmap_limits mostra la primera regla.
+
+22
+00:01:27.340 --> 00:01:31.570
+Si un procés intenta tocar una pàgina que
+és sencera més enllà del final del fitxer,
+
+23
+00:01:31.620 --> 00:01:33.180
+no hi ha dades per portar.
+
+24
+00:01:33.240 --> 00:01:35.980
+El nucli hi intervé i
+envia el senyal SIGBUS.
+
+25
+00:01:36.240 --> 00:01:38.020
+Hi ha un segon límit.
+
+26
+00:01:38.260 --> 00:01:42.370
+Si un procés intenta escriure en una zona
+mapada amb permisos de només lectura,
+
+27
+00:01:42.420 --> 00:01:45.480
+el nucli torna a intervenir
+i envia el senyal SIGSEGV.
+
+28
+00:01:45.900 --> 00:01:50.470
+Així, encara que mmap crea amb èxit un espai obert
+per a les dades, el nucli continua actuant com
+
+29
+00:01:50.520 --> 00:01:53.400
+un guarda de frontera estricte
+que fa complir límits i permisos.
+
+30
+00:01:53.560 --> 00:01:56.670
+Hi ha una altra manera de compartir dades
+que no necessita cap fitxer al darrere.
+
+31
+00:01:56.720 --> 00:02:02.290
+Podem fer servir la memòria compartida de
+System V, amb shmget i shmat, per crear un
+
+32
+00:02:02.340 --> 00:02:06.990
+bloc de memòria independent. El tret que
+defineix aquesta memòria de System V és la seva
+
+33
+00:02:07.040 --> 00:02:11.570
+persistència. El segment sobreviu
+als processos que l’han creat.
+
+34
+00:02:11.620 --> 00:02:16.860
+Es queda al sistema amb les seves dades fins
+que un procés el destrueix explícitament.
+
+35
+00:02:16.920 --> 00:02:22.180
+Tant si mapem un fitxer com si fem servir System
+V, obtenim un espai de memòria rapidíssim.
+
+36
+00:02:22.360 --> 00:02:27.840
+Però aquest accés directe i sense protecció és just
+el que ha fet fallar els nostres 32 processos.
+
+37
+00:02:28.180 --> 00:02:32.880
+Tornem als nostres 32 processos i posem-los al
+voltant del nou bloc de memòria compartida.
+
+38
+00:02:33.240 --> 00:02:37.370
+Com que la memòria compartida funciona del tot
+en mode usuari, la comunicació no passa mai
+
+39
+00:02:37.420 --> 00:02:41.120
+pel nucli. No hi ha cap àrbitre
+que sincronitzi les seves accions.
+
+40
+00:02:41.420 --> 00:02:45.460
+La fallada passa en una operació molt
+simple: incrementar el comptador.
+
+41
+00:02:45.660 --> 00:02:48.540
+A la velocitat del processador,
+sembla una sola acció.
+
+42
+00:02:48.640 --> 00:02:52.210
+Però si alentim el temps, veiem que en
+realitat són tres passos diferents.
+
+43
+00:02:52.260 --> 00:02:55.620
+Llegir el valor, sumar-hi
+u i tornar-lo a escriure.
+
+44
+00:02:55.940 --> 00:03:00.210
+Sense un àrbitre al nucli, dos processos
+diferents poden fer la lectura en
+
+45
+00:03:00.260 --> 00:03:01.940
+exactament la mateixa fracció de segon.
+
+46
+00:03:02.020 --> 00:03:06.960
+Tots dos llegeixen un u, tots dos hi sumen u i
+tots dos escriuen un dos a la memòria compartida.
+
+47
+00:03:07.100 --> 00:03:10.400
+Han treballat dos processos, però
+el comptador només ha pujat u.
+
+48
+00:03:10.720 --> 00:03:13.340
+Aquest xoc mecànic és
+una condició de carrera.
+
+49
+00:03:13.560 --> 00:03:17.410
+Per això els registres dels nostres
+processos s’han trepitjat en silenci i
+
+50
+00:03:17.460 --> 00:03:21.210
+han desaparegut. La memòria compartida ens
+dona una velocitat en brut inigualable.
+
+51
+00:03:21.260 --> 00:03:25.490
+Però per fer-la servir amb seguretat, hem de construir
+la nostra pròpia sincronització: aquest és el
+
+52
+00:03:25.540 --> 00:03:28.060
+repte de la unitat 7. Repassem.
+
+53
+00:03:28.380 --> 00:03:32.870
+Si un procés escriu en una pàgina que és sencera
+més enllà del final d’un fitxer mapat, quin
+
+54
+00:03:32.920 --> 00:03:34.420
+senyal envia el nucli?
+
+55
+00:03:34.820 --> 00:03:39.930
+SIGBUS. La següent. Per què la memòria compartida
+de System V es queda al sistema quan el programa
+
+56
+00:03:39.980 --> 00:03:44.670
+acaba? Perquè el segment sobreviu als
+processos fins que algú el destrueix
+
+57
+00:03:44.720 --> 00:03:51.920
+explícitament. Ara obre les animacions A6.2
+i A6.3 a l’aula i fes el laboratori TD5.

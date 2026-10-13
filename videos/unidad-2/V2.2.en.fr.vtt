@@ -1,0 +1,345 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.320
+Imaginez deux ordinateurs identiques qui
+copient le même fichier de 8 mégaoctets.
+
+2
+00:00:08.600 --> 00:00:14.000
+L’un termine instantanément. L’autre
+se traîne pendant plusieurs secondes.
+
+3
+00:00:14.460 --> 00:00:19.310
+On parle de moins d’une milliseconde
+contre des secondes d’attente
+
+4
+00:00:19.360 --> 00:00:23.660
+exaspérante. Les deux programmes
+suivent exactement la même logique.
+
+5
+00:00:23.780 --> 00:00:28.010
+La seule différence est la taille du
+tampon mémoire où ils stockent les
+
+6
+00:00:28.060 --> 00:00:33.410
+données. Comment la taille d’un tampon
+peut-elle décider de la vitesse d’une simple
+
+7
+00:00:33.460 --> 00:00:38.590
+tâche d’entrée-sortie ? Pour le savoir, il
+faut regarder de près comment un processus
+
+8
+00:00:38.640 --> 00:00:41.240
+communique avec le système d’exploitation.
+
+9
+00:00:41.700 --> 00:00:46.670
+Chaque processus naît avec trois descripteurs
+ouverts : 0 pour l’entrée standard, 1
+
+10
+00:00:46.720 --> 00:00:49.740
+pour la sortie standard et
+2 pour l’erreur standard.
+
+11
+00:00:50.180 --> 00:00:53.830
+Le programme ne sait pas ce
+que représentent ces numéros.
+
+12
+00:00:53.880 --> 00:00:57.160
+Il s’en sert seulement pour
+demander ou envoyer des données.
+
+13
+00:00:57.400 --> 00:01:01.790
+C’est le shell qui leur donne un sens,
+avec des opérateurs comme inférieur
+
+14
+00:01:01.840 --> 00:01:06.260
+à ou supérieur à. Le shell les relie
+à un fichier, un terminal ou un tube.
+
+15
+00:01:06.780 --> 00:01:11.200
+Ce tableau, produit par l’outil de
+mesure du cours, montre le vrai coût.
+
+16
+00:01:11.740 --> 00:01:17.530
+La ligne avec un tampon de 64 kilo-octets
+finit en 129 appels, alors que la
+
+17
+00:01:17.580 --> 00:01:22.100
+ligne avec un tampon d’un octet impose
+plus de huit millions d’appels système.
+
+18
+00:01:22.420 --> 00:01:25.840
+Le disque est exactement le
+même dans les deux essais.
+
+19
+00:01:26.140 --> 00:01:30.350
+Comme le descripteur abstrait complètement
+la destination, ce n’est pas le matériel
+
+20
+00:01:30.400 --> 00:01:34.650
+qui nous ralentit. L’énorme retard
+vient directement du nombre
+
+21
+00:01:34.700 --> 00:01:38.120
+d’appels système. Prenons l’appel read.
+
+22
+00:01:38.360 --> 00:01:42.450
+Le programme demande des données au noyau,
+et l’appel renvoie le nombre exact d’octets
+
+23
+00:01:42.500 --> 00:01:44.120
+qu’il a pu lire.
+
+24
+00:01:44.300 --> 00:01:48.390
+Les règles sont strictes. Si l’appel atteint
+la fin du fichier, il renvoie exactement
+
+25
+00:01:48.440 --> 00:01:51.940
+zéro. En cas d’erreur,
+il renvoie moins un.
+
+26
+00:01:52.240 --> 00:01:55.200
+Mais en programmation système, il
+y a une mise en garde importante.
+
+27
+00:01:55.420 --> 00:01:59.700
+Un appel read peut renvoyer moins d’octets
+que votre programme n’en a demandé.
+
+28
+00:01:59.980 --> 00:02:01.820
+Cette lecture partielle arrive souvent.
+
+29
+00:02:02.260 --> 00:02:06.410
+Le programme peut lire depuis un
+socket réseau ou un tube, ou le
+
+30
+00:02:06.460 --> 00:02:08.740
+processus peut être
+interrompu par un signal.
+
+31
+00:02:09.160 --> 00:02:13.310
+Comme on ne sait pas combien de données
+vont arriver, il ne faut jamais compter sur
+
+32
+00:02:13.360 --> 00:02:15.920
+un seul appel read pour
+lire un fichier entier.
+
+33
+00:02:16.260 --> 00:02:19.760
+L’appel write a exactement la même limite.
+
+34
+00:02:19.960 --> 00:02:22.300
+Lui aussi peut s’arrêter à mi-chemin.
+
+35
+00:02:22.660 --> 00:02:26.550
+Une écriture peut être coupée si le tube
+ou le socket de destination est plein,
+
+36
+00:02:26.600 --> 00:02:30.060
+ou si un signal interrompt le
+processus avant l’envoi des données.
+
+37
+00:02:30.620 --> 00:02:33.460
+Ce code montre la parade obligatoire en C.
+
+38
+00:02:33.620 --> 00:02:37.680
+Une boucle while appelle write encore et encore
+jusqu’à envoyer tous les octets demandés.
+
+39
+00:02:37.960 --> 00:02:42.390
+Le laboratoire l’exige : il met read dans une
+boucle infinie pour réessayer et construit
+
+40
+00:02:42.440 --> 00:02:46.060
+des enveloppes robustes comme
+read_exact et write_all.
+
+41
+00:02:46.680 --> 00:02:50.810
+Garantir des entrées-sorties robustes
+oblige les programmes à boucler.
+
+42
+00:02:50.860 --> 00:02:54.500
+Et cette boucle multiplie directement
+le nombre d’appels système.
+
+43
+00:02:54.800 --> 00:02:59.190
+Chaque fois que votre programme appelle read
+ou write, le CPU doit suspendre l’exécution
+
+44
+00:02:59.240 --> 00:03:03.600
+en mode utilisateur. Puis il saute la
+frontière de privilèges vers le mode noyau.
+
+45
+00:03:03.960 --> 00:03:06.700
+Cet aller-retour obligatoire
+est un changement de contexte.
+
+46
+00:03:06.980 --> 00:03:10.470
+Sauvegarder les registres et valider
+les arguments a un coût en temps
+
+47
+00:03:10.520 --> 00:03:14.320
+inévitable. Sur la machine du
+cours, nous avons mesuré ce péage.
+
+48
+00:03:14.500 --> 00:03:19.340
+Il coûte environ 0,7 microseconde
+par aller-retour de read et write.
+
+49
+00:03:19.540 --> 00:03:24.390
+Le système d’exploitation fait payer le
+même péage de 0,7 microseconde, que l’appel
+
+50
+00:03:24.440 --> 00:03:27.500
+transporte une masse de
+données ou un seul octet.
+
+51
+00:03:27.800 --> 00:03:31.070
+Le vrai goulot d’étranglement n’est
+jamais la quantité de données déplacées.
+
+52
+00:03:31.120 --> 00:03:34.520
+C’est le nombre de passages de
+frontière nécessaires pour les déplacer.
+
+53
+00:03:34.780 --> 00:03:38.550
+Revenons au mystère du début, les huit
+mégaoctets, et appliquons ce calcul
+
+54
+00:03:38.600 --> 00:03:40.280
+au cas du tampon d’un octet.
+
+55
+00:03:40.620 --> 00:03:44.910
+Déplacer huit mégaoctets octet par octet
+oblige le programme à franchir la frontière
+
+56
+00:03:44.960 --> 00:03:49.720
+8,4 millions de fois. Voilà pourquoi
+cela prend plusieurs secondes.
+
+57
+00:03:50.300 --> 00:03:52.730
+Comparez avec le tampon de 64 kilo-octets.
+
+58
+00:03:52.780 --> 00:03:59.530
+Il transporte les mêmes huit
+mégaoctets, mais n’a besoin que de 129
+
+59
+00:03:59.580 --> 00:04:05.670
+allers-retours. Comme le programme ne paie le
+péage du changement de contexte que 129 fois, le
+
+60
+00:04:05.720 --> 00:04:09.180
+temps total tombe sous la milliseconde.
+
+61
+00:04:09.660 --> 00:04:13.120
+D’où la règle d’or de
+l’architecture des systèmes.
+
+62
+00:04:13.340 --> 00:04:16.320
+Ne travaillez jamais octet
+par octet dans une boucle.
+
+63
+00:04:16.540 --> 00:04:20.770
+Regroupez toujours les données dans des tampons
+de quelques kilo-octets ou plus pour réduire
+
+64
+00:04:20.820 --> 00:04:24.280
+les voyages vers le noyau. Vous n’avez
+pas toujours à le faire à la main.
+
+65
+00:04:24.820 --> 00:04:28.630
+La bibliothèque C standard applique
+cette règle automatiquement
+
+66
+00:04:28.680 --> 00:04:31.740
+quand vous utilisez des
+fonctions comme printf ou fwrite.
+
+67
+00:04:32.520 --> 00:04:38.430
+Récapitulons. Question un : que
+renvoie read quand il atteint la fin
+
+68
+00:04:38.480 --> 00:04:41.140
+d’un fichier ? Il renvoie zéro.
+
+69
+00:04:42.060 --> 00:04:46.780
+Question deux : pourquoi la copie d’un
+fichier octet par octet est-elle si lente ?
+
+70
+00:04:47.080 --> 00:04:51.920
+Parce que chaque appel système paie un péage de
+temps fixe pour franchir la frontière de privilèges.
+
+71
+00:04:52.580 --> 00:04:59.360
+Ouvrez maintenant les animations A2.3 et A2.4 dans
+le cours en ligne et faites le laboratoire TD1.

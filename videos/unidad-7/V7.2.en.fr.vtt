@@ -1,0 +1,327 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.960
+Un thread est une exécution séquentielle
+à l’intérieur d’un processus.
+
+2
+00:00:07.320 --> 00:00:11.010
+Comme les threads partagent le même espace
+d’adressage, ils peuvent se passer des données
+
+3
+00:00:11.060 --> 00:00:16.530
+très vite. On le voit dans un processus
+en mode utilisateur, qui fonctionne
+
+4
+00:00:16.580 --> 00:00:20.910
+en sécurité au-dessus de la frontière de privilèges
+du noyau, avec une zone partagée appelée tampon
+
+5
+00:00:20.960 --> 00:00:25.860
+borné. Une façon classique d’y faire circuler des
+données est le modèle producteur-consommateur.
+
+6
+00:00:26.340 --> 00:00:30.290
+Les producteurs génèrent des données et les placent dans
+le tampon, tandis que les consommateurs les lisent et
+
+7
+00:00:30.340 --> 00:00:34.160
+les traitent. Pour se coordonner,
+ils s’appuient sur deux sémaphores.
+
+8
+00:00:34.500 --> 00:00:38.530
+Avant d’écrire, un producteur teste un sémaphore
+nommé empty, qui part du nombre total de
+
+9
+00:00:38.580 --> 00:00:43.510
+cases du tampon. Avant de lire, un consommateur
+teste un sémaphore nommé full, qui part de
+
+10
+00:00:43.560 --> 00:00:46.840
+zéro. S’il y a de la place,
+le producteur peut écrire.
+
+11
+00:00:47.040 --> 00:00:51.170
+Mais pour éviter une condition de course en
+mettant à jour la même case, ils utilisent un
+
+12
+00:00:51.220 --> 00:00:54.520
+mutex, qui verrouille l’index
+partagé pour un accès exclusif.
+
+13
+00:00:55.140 --> 00:00:59.330
+Quand le travail est fini, le programme principal
+peut envoyer une pilule empoisonnée : une valeur
+
+14
+00:00:59.380 --> 00:01:03.840
+précise qui traverse le tampon et signale
+à tous les threads de s’arrêter proprement.
+
+15
+00:01:04.280 --> 00:01:08.540
+Ce système fonctionne parfaitement parce que le
+flux des ressources est parfaitement linéaire.
+
+16
+00:01:08.820 --> 00:01:10.580
+Les données ne vont que dans un sens.
+
+17
+00:01:11.020 --> 00:01:15.150
+Mais les systèmes se dégradent vite quand des
+threads doivent verrouiller plusieurs ressources
+
+18
+00:01:15.200 --> 00:01:19.760
+en même temps. On peut modéliser ce
+problème avec cinq philosophes à table.
+
+19
+00:01:20.120 --> 00:01:21.900
+Ils sont assis autour d’une table ronde.
+
+20
+00:01:22.080 --> 00:01:26.230
+Entre chaque philosophe se trouve une seule
+baguette, et chaque baguette est protégée
+
+21
+00:01:26.280 --> 00:01:29.080
+par un pthread_mutex_lock.
+
+22
+00:01:29.440 --> 00:01:32.540
+Pour manger, un philosophe
+a besoin de deux baguettes.
+
+23
+00:01:32.880 --> 00:01:37.050
+Dans notre système, cela représente un thread
+qui a besoin d’un accès exclusif à deux
+
+24
+00:01:37.100 --> 00:01:40.120
+ressources différentes en même
+temps pour faire son travail.
+
+25
+00:01:40.680 --> 00:01:45.310
+Le processus commence. Chaque philosophe
+tend la main et utilise avec succès
+
+26
+00:01:45.360 --> 00:01:48.660
+pthread_mutex_lock pour
+prendre la baguette de droite.
+
+27
+00:01:48.900 --> 00:01:51.980
+Mais en se tournant vers la baguette
+de gauche, ils se heurtent à un mur.
+
+28
+00:01:52.160 --> 00:01:53.900
+Elle est déjà tenue par leur voisin.
+
+29
+00:01:54.100 --> 00:01:56.680
+Tous les philosophes
+s’endorment en attendant.
+
+30
+00:01:56.960 --> 00:02:01.750
+La table se fige. Cette sortie du terminal montre
+exactement ce qui se passe quand on exécute ce
+
+31
+00:02:01.800 --> 00:02:03.200
+code sur la machine du cours.
+
+32
+00:02:03.440 --> 00:02:05.960
+Les threads se bloquent complètement.
+
+33
+00:02:06.060 --> 00:02:10.550
+Et après un délai de trois secondes, le
+système tue le programme, avec l’état
+
+34
+00:02:10.600 --> 00:02:12.180
+de sortie 124.
+
+35
+00:02:13.040 --> 00:02:15.920
+Cet échec précis
+s’appelle un interblocage.
+
+36
+00:02:16.020 --> 00:02:19.240
+C’est un état où un ensemble de threads
+s’attendent mutuellement pour toujours.
+
+37
+00:02:19.880 --> 00:02:21.970
+Un interblocage n’arrive pas au hasard.
+
+38
+00:02:22.020 --> 00:02:26.890
+Il n’apparaît que si quatre règles strictes,
+les conditions de Coffman, sont réunies en
+
+39
+00:02:26.940 --> 00:02:30.720
+même temps. La condition un
+est l’exclusion mutuelle.
+
+40
+00:02:30.980 --> 00:02:34.080
+Une baguette ne peut être tenue
+que par un philosophe à la fois.
+
+41
+00:02:34.780 --> 00:02:36.460
+La condition deux est la
+détention et l’attente.
+
+42
+00:02:36.660 --> 00:02:40.660
+Un philosophe garde sa première
+baguette en attendant la seconde.
+
+43
+00:02:41.200 --> 00:02:43.040
+La condition trois est
+l’absence de préemption.
+
+44
+00:02:43.220 --> 00:02:47.170
+Le système ne peut pas forcer un
+philosophe à lâcher une baguette qu’il
+
+45
+00:02:47.220 --> 00:02:50.900
+tient déjà. La condition quatre
+est l’attente circulaire.
+
+46
+00:02:51.040 --> 00:02:54.080
+Les dépendances forment une
+boucle fermée autour de la table.
+
+47
+00:02:54.440 --> 00:02:58.260
+Si ces quatre conditions sont réunies,
+votre système sera en interblocage.
+
+48
+00:02:58.740 --> 00:03:02.790
+Comme un interblocage exige les quatre conditions,
+on peut corriger le programme en en cassant
+
+49
+00:03:02.840 --> 00:03:07.230
+une seule. On élimine l’attente
+circulaire en numérotant chaque
+
+50
+00:03:07.280 --> 00:03:10.220
+baguette. On introduit un ordre global.
+
+51
+00:03:10.480 --> 00:03:13.040
+Toujours prendre d’abord la
+baguette de plus petit numéro.
+
+52
+00:03:13.360 --> 00:03:17.440
+Le dernier philosophe, entre quatre et
+zéro, tend maintenant la main vers zéro.
+
+53
+00:03:17.760 --> 00:03:20.380
+Comme le philosophe zéro
+la tient, il s’endort.
+
+54
+00:03:20.880 --> 00:03:22.280
+La baguette quatre reste libre.
+
+55
+00:03:22.360 --> 00:03:25.220
+Le voisin la prend,
+mange et repose les deux.
+
+56
+00:03:25.400 --> 00:03:29.760
+La boucle est cassée. On peut aussi
+casser les interblocages autrement.
+
+57
+00:03:29.880 --> 00:03:33.850
+On peut limiter le nombre de threads en
+concurrence en ajoutant un serveur, ou faire
+
+58
+00:03:33.900 --> 00:03:37.620
+libérer leurs ressources aux threads
+pour réessayer avec la fonction trylock.
+
+59
+00:03:38.180 --> 00:03:40.780
+Un mutex seul ne peut pas
+empêcher un interblocage.
+
+60
+00:03:41.000 --> 00:03:45.610
+Pour écrire du code C concurrent et sûr, vous
+devez concevoir l’ordre exact dans lequel
+
+61
+00:03:45.660 --> 00:03:47.440
+vos threads prennent leurs verrous.
+
+62
+00:03:48.100 --> 00:03:50.220
+Récapitulons. Question un.
+
+63
+00:03:50.500 --> 00:03:53.500
+Dans un tampon borné, qu’attendent
+les deux sémaphores ?
+
+64
+00:03:53.980 --> 00:03:56.540
+Ils attendent les cases
+vides et les cases pleines.
+
+65
+00:03:57.220 --> 00:04:01.290
+Question deux. Quelle condition de Coffman est
+cassée en prenant les verrous dans un ordre
+
+66
+00:04:01.340 --> 00:04:04.040
+numérique strict ? L’attente circulaire.
+
+67
+00:04:04.280 --> 00:04:10.750
+Ouvrez maintenant les animations A7.2 et A7.3
+dans le cours en ligne et faites le laboratoire
+
+68
+00:04:10.800 --> 00:04:12.180
+TD6.

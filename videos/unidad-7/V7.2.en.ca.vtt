@@ -1,0 +1,322 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.960
+Un fil és una execució
+seqüencial dins d’un procés.
+
+2
+00:00:07.320 --> 00:00:11.010
+Com que els fils comparteixen el mateix
+espai d’adreces, es poden passar dades
+
+3
+00:00:11.060 --> 00:00:16.530
+molt de pressa. Ho veiem dins d’un procés
+que corre en mode usuari, treballant
+
+4
+00:00:16.580 --> 00:00:20.910
+amb seguretat sobre la frontera de privilegis del nucli,
+amb una àrea compartida anomenada memòria intermèdia
+
+5
+00:00:20.960 --> 00:00:25.860
+acotada. Una manera clàssica de moure-hi
+dades és el model productor-consumidor.
+
+6
+00:00:26.340 --> 00:00:30.290
+Els productors generen dades i les posen a la memòria
+intermèdia, mentre els consumidors les llegeixen i
+
+7
+00:00:30.340 --> 00:00:34.160
+les processen. Per coordinar-se,
+fan servir dos semàfors.
+
+8
+00:00:34.500 --> 00:00:38.530
+Abans d’escriure, un productor revisa un semàfor
+anomenat empty, que comença al nombre total de
+
+9
+00:00:38.580 --> 00:00:43.510
+cel·les de la memòria intermèdia. Abans de llegir,
+un consumidor revisa el semàfor full, que comença a
+
+10
+00:00:43.560 --> 00:00:46.840
+zero. Si hi ha espai, el
+productor pot escriure.
+
+11
+00:00:47.040 --> 00:00:51.170
+Però per evitar una condició de carrera en
+actualitzar la mateixa posició, fan servir un
+
+12
+00:00:51.220 --> 00:00:54.520
+mutex, que bloca l’índex compartit
+per tenir-hi accés exclusiu.
+
+13
+00:00:55.140 --> 00:00:59.330
+Quan s’acaba la feina, el programa principal
+pot enviar una píndola verinosa: un valor
+
+14
+00:00:59.380 --> 00:01:03.840
+concret que viatja per la memòria intermèdia i
+avisa tots els fils que han d’acabar ordenadament.
+
+15
+00:01:04.280 --> 00:01:08.540
+Aquest sistema funciona perfectament perquè
+el flux de recursos és totalment lineal.
+
+16
+00:01:08.820 --> 00:01:10.580
+Les dades només es mouen en un sentit.
+
+17
+00:01:11.020 --> 00:01:15.150
+Però els sistemes es trenquen de seguida quan
+els fils necessiten blocar diversos recursos
+
+18
+00:01:15.200 --> 00:01:19.760
+alhora. Podem modelar aquest
+problema amb cinc filòsofs a taula.
+
+19
+00:01:20.120 --> 00:01:21.900
+Seuen al voltant d’una taula rodona.
+
+20
+00:01:22.080 --> 00:01:26.230
+Entre cada filòsof hi ha un sol
+bastonet, i cada bastonet està protegit
+
+21
+00:01:26.280 --> 00:01:29.080
+per un pthread_mutex_lock.
+
+22
+00:01:29.440 --> 00:01:32.540
+Per menjar, un filòsof
+necessita dos bastonets.
+
+23
+00:01:32.880 --> 00:01:37.050
+En el nostre sistema, això representa un
+fil que necessita accés exclusiu a dos
+
+24
+00:01:37.100 --> 00:01:40.120
+recursos diferents alhora
+per fer la seva feina.
+
+25
+00:01:40.680 --> 00:01:45.310
+Comença el procés. Cada filòsof
+allarga la mà i fa servir amb èxit
+
+26
+00:01:45.360 --> 00:01:48.660
+pthread_mutex_lock per agafar
+el bastonet de la dreta.
+
+27
+00:01:48.900 --> 00:01:51.980
+Però quan van a buscar el bastonet
+de l’esquerra, topen amb un mur.
+
+28
+00:01:52.160 --> 00:01:53.900
+Ja el té el seu veí.
+
+29
+00:01:54.100 --> 00:01:56.680
+Tots els filòsofs s’adormen esperant.
+
+30
+00:01:56.960 --> 00:02:01.750
+La taula es congela. Aquesta sortida del terminal
+mostra exactament què passa quan executem aquest
+
+31
+00:02:01.800 --> 00:02:03.200
+codi a la màquina del curs.
+
+32
+00:02:03.440 --> 00:02:05.960
+Els fils es bloquen del tot.
+
+33
+00:02:06.060 --> 00:02:10.550
+I després d’un temps límit de tres segons,
+el sistema mata el programa, amb l’estat
+
+34
+00:02:10.600 --> 00:02:12.180
+de sortida 124.
+
+35
+00:02:13.040 --> 00:02:15.920
+Aquesta fallada concreta
+s’anomena interbloqueig.
+
+36
+00:02:16.020 --> 00:02:19.240
+És un estat en què un conjunt de
+fils s’esperen mútuament per sempre.
+
+37
+00:02:19.880 --> 00:02:21.970
+Un interbloqueig no passa a l’atzar.
+
+38
+00:02:22.020 --> 00:02:26.890
+Només apareix si es compleixen alhora quatre
+regles estrictes, les condicions de Coffman.
+
+39
+00:02:26.940 --> 00:02:30.720
+La condició u és l’exclusió mútua.
+
+40
+00:02:30.980 --> 00:02:34.080
+Un bastonet només el pot
+tenir un filòsof alhora.
+
+41
+00:02:34.780 --> 00:02:36.460
+La condició dos és retenir i esperar.
+
+42
+00:02:36.660 --> 00:02:40.660
+Un filòsof es queda el primer
+bastonet mentre espera el segon.
+
+43
+00:02:41.200 --> 00:02:43.040
+La tres és la no expropiació.
+
+44
+00:02:43.220 --> 00:02:47.170
+El sistema operatiu no pot obligar un
+filòsof a deixar anar un bastonet que ja
+
+45
+00:02:47.220 --> 00:02:50.900
+té. La condició quatre
+és l’espera circular.
+
+46
+00:02:51.040 --> 00:02:54.080
+Les dependències formen un cicle
+tancat al voltant de la taula.
+
+47
+00:02:54.440 --> 00:02:58.260
+Si es compleixen aquestes quatre condicions,
+el teu sistema caurà en interbloqueig.
+
+48
+00:02:58.740 --> 00:03:02.790
+Com que un interbloqueig necessita les quatre
+condicions, podem arreglar el programa trencant-ne
+
+49
+00:03:02.840 --> 00:03:07.230
+només una. Eliminem l’espera
+circular donant un número a cada
+
+50
+00:03:07.280 --> 00:03:10.220
+bastonet. Introduïm un ordre global.
+
+51
+00:03:10.480 --> 00:03:13.040
+Agafa sempre primer el
+bastonet de número més baix.
+
+52
+00:03:13.360 --> 00:03:17.440
+L’últim filòsof, entre el quatre i
+el zero, ara va a buscar el zero.
+
+53
+00:03:17.760 --> 00:03:20.380
+Com que el té el filòsof zero, s’adorm.
+
+54
+00:03:20.880 --> 00:03:22.280
+El bastonet quatre queda lliure.
+
+55
+00:03:22.360 --> 00:03:25.220
+El veí l’agafa, menja
+i deixa anar tots dos.
+
+56
+00:03:25.400 --> 00:03:29.760
+El cicle es trenca. També pots trencar
+els interbloquejos amb altres mètodes.
+
+57
+00:03:29.880 --> 00:03:33.850
+Pots limitar quants fils competeixen alhora
+afegint-hi un cambrer, o pots fer que els
+
+58
+00:03:33.900 --> 00:03:37.620
+fils alliberin els seus recursos i ho
+tornin a provar amb la funció trylock.
+
+59
+00:03:38.180 --> 00:03:40.780
+Un mutex, tot sol, no pot
+evitar un interbloqueig.
+
+60
+00:03:41.000 --> 00:03:45.610
+Per escriure codi C concurrent i segur,
+has de dissenyar l’ordre exacte en què
+
+61
+00:03:45.660 --> 00:03:47.440
+els teus fils agafen els seus panys.
+
+62
+00:03:48.100 --> 00:03:50.220
+Repassem. Pregunta u.
+
+63
+00:03:50.500 --> 00:03:53.500
+En una memòria intermèdia acotada,
+què esperen els dos semàfors?
+
+64
+00:03:53.980 --> 00:03:56.540
+Esperen les posicions buides
+i les posicions plenes.
+
+65
+00:03:57.220 --> 00:04:01.290
+Pregunta dos. Quina condició de Coffman
+es trenca agafant els panys en un ordre
+
+66
+00:04:01.340 --> 00:04:04.040
+numèric estricte? L’espera circular.
+
+67
+00:04:04.280 --> 00:04:10.750
+Ara obre les animacions A7.2 i
+A7.3 a l’aula i fes el laboratori
+
+68
+00:04:10.800 --> 00:04:12.180
+TD6.

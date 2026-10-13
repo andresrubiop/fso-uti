@@ -1,0 +1,288 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.890
+Al laboratori TD6 posem 8 programes a fer
+de venedors concurrents d’entrades, amb
+
+2
+00:00:08.940 --> 00:00:11.440
+una reserva compartida
+de 100 000 entrades.
+
+3
+00:00:11.780 --> 00:00:14.820
+Però en revisar aquesta sortida del
+terminal, els comptes no quadren.
+
+4
+00:00:15.020 --> 00:00:21.440
+Han venut 103 195 entrades i han
+deixat un saldo negatiu de menys 7.
+
+5
+00:00:21.620 --> 00:00:24.260
+El codi s’ha executat exactament
+tal com estava escrit.
+
+6
+00:00:24.480 --> 00:00:26.880
+Els venedors són simplement
+fils d’un procés en C.
+
+7
+00:00:27.020 --> 00:00:30.970
+Aquí veus la resta,
+tickets--, que s’executa dins
+
+8
+00:00:31.020 --> 00:00:36.890
+d’un bucle while. Com pot un ordinador
+fer bé una resta i tot i així vendre més
+
+9
+00:00:36.940 --> 00:00:38.820
+articles dels que existeixen?
+
+10
+00:00:39.240 --> 00:00:41.820
+La resposta és en com s’executen els fils.
+
+11
+00:00:42.240 --> 00:00:46.910
+La il·lusió d’execució simultània crea
+punts cecs ocults que corrompen en silenci
+
+12
+00:00:46.960 --> 00:00:52.140
+les teves dades. Els programadors fan servir
+fils en lloc de processos complets per una raó:
+
+13
+00:00:52.300 --> 00:00:57.830
+la velocitat. Com mostra aquesta sortida, crear
+un procés a la màquina del curs triga 248,8
+
+14
+00:00:57.880 --> 00:01:02.980
+microsegons. És 6,0 vegades
+més que crear un sol fil.
+
+15
+00:01:03.560 --> 00:01:05.940
+Els fils són més ràpids
+perquè no copien dades.
+
+16
+00:01:06.380 --> 00:01:10.720
+A l’arquitectura, el mode usuari és sobre la
+frontera de privilegis i el mode nucli, a sota.
+
+17
+00:01:10.940 --> 00:01:14.040
+Dins d’un procés d’usuari,
+els fils treballen junts.
+
+18
+00:01:14.180 --> 00:01:19.000
+Comparteixen tot l’espai d’adreces:
+codi, descriptors, munt i dades globals.
+
+19
+00:01:19.300 --> 00:01:23.240
+Però cada fil té la seva pròpia pila privada
+i els seus propis registres del maquinari.
+
+20
+00:01:23.540 --> 00:01:28.100
+Aquesta arquitectura de memòria compartida
+és ràpida, però físicament vulnerable.
+
+21
+00:01:28.340 --> 00:01:32.210
+Com que no hi ha protecció de memòria
+entre ells, un error en un fil pot
+
+22
+00:01:32.260 --> 00:01:34.380
+corrompre a l’instant les dades de tots.
+
+23
+00:01:34.660 --> 00:01:38.450
+Tornem a aquella línia de codi C
+responsable de la resta en la venda
+
+24
+00:01:38.500 --> 00:01:44.430
+d’entrades. Per a un processador
+x86-64, una sola línia de C no és un sol
+
+25
+00:01:44.480 --> 00:01:49.340
+pas atòmic. El maquinari divideix
+la resta en tres passos diferents:
+
+26
+00:01:49.400 --> 00:01:53.690
+llegir la variable de memòria a un
+registre, restar-hi u i tornar a escriure el
+
+27
+00:01:53.740 --> 00:01:57.970
+nou valor a la memòria. El problema
+apareix quan dos fils diferents intenten
+
+28
+00:01:58.020 --> 00:02:00.220
+executar aquests passos
+exactament al mateix temps.
+
+29
+00:02:00.440 --> 00:02:04.770
+Si el fil A i el fil B fan la
+lectura alhora, tots dos treuen
+
+30
+00:02:04.820 --> 00:02:06.960
+el mateix número inicial de la memòria.
+
+31
+00:02:07.460 --> 00:02:12.010
+Després tots dos resten u als seus
+registres privats, i tots dos escriuen
+
+32
+00:02:12.060 --> 00:02:14.900
+el mateix número actualitzat
+a la memòria compartida.
+
+33
+00:02:15.220 --> 00:02:17.620
+Una escriptura trepitja del tot l’altra.
+
+34
+00:02:17.880 --> 00:02:20.660
+Aquest xoc en el temps és
+una condició de carrera.
+
+35
+00:02:21.360 --> 00:02:25.710
+Com que el planificador pot intercalar aquests passos
+del maquinari en qualsevol ordre, les lectures
+
+36
+00:02:25.760 --> 00:02:28.480
+i escriptures simples no són
+segures amb dades compartides.
+
+37
+00:02:28.780 --> 00:02:33.550
+Per arreglar-ho, necessitem una secció crítica:
+un fragment de codi protegit que només un
+
+38
+00:02:33.600 --> 00:02:36.740
+fil pot executar alhora, per
+garantir l’exclusió mútua.
+
+39
+00:02:37.040 --> 00:02:42.140
+L’eina estàndard per imposar aquesta frontera
+és la funció POSIX pthread_mutex_lock.
+
+40
+00:02:42.440 --> 00:02:46.530
+Com mostra aquest codi, qui agafa el pany
+executa la seva operació de tres passos
+
+41
+00:02:46.580 --> 00:02:51.720
+sense interrupcions. Si arriba un altre
+fil, dorm fins que s’allibera el mutex.
+
+42
+00:02:52.180 --> 00:02:54.900
+En executar aquest codi protegit
+s’obté el resultat correcte.
+
+43
+00:02:55.080 --> 00:02:59.970
+Ara la sortida registra exactament
+100 000 entrades venudes, sense
+
+44
+00:03:00.020 --> 00:03:04.040
+actualitzacions perdudes. Un mutex actua
+com un coll d’ampolla físic estricte.
+
+45
+00:03:04.200 --> 00:03:08.120
+Canvia la màxima velocitat en paral·lel
+per la integritat garantida de les dades.
+
+46
+00:03:08.520 --> 00:03:12.780
+Hi ha una alternativa estructuralment
+diferent al pany: el semàfor.
+
+47
+00:03:12.900 --> 00:03:17.330
+Un semàfor és un enter amb operacions
+atòmiques per naturalesa, integrades al
+
+48
+00:03:17.380 --> 00:03:21.890
+maquinari. En lloc de tancar amb pany una secció
+de codi a part per actualitzar una variable, el
+
+49
+00:03:21.940 --> 00:03:24.360
+semàfor és el mateix comptador d’entrades.
+
+50
+00:03:24.520 --> 00:03:28.970
+Una funció com sem_trywait revisa
+l’enter i li resta u en un sol
+
+51
+00:03:29.020 --> 00:03:33.410
+pas indivisible. Fer servir instruccions
+atòmiques del maquinari elimina del tot
+
+52
+00:03:33.460 --> 00:03:36.740
+els estats intermedis on prosperen
+les condicions de carrera.
+
+53
+00:03:37.320 --> 00:03:41.070
+Repassem. Quina memòria comparteix un
+fil amb els altres fils del mateix
+
+54
+00:03:41.120 --> 00:03:43.380
+procés, i què es guarda en privat?
+
+55
+00:03:43.660 --> 00:03:48.110
+Comparteixen el codi, les dades globals, el munt
+i els descriptors, però cadascun té la seva pròpia
+
+56
+00:03:48.160 --> 00:03:49.940
+pila privada i els seus registres.
+
+57
+00:03:50.580 --> 00:03:55.540
+Pregunta dos: per què restar una variable
+compartida en C no és una operació atòmica?
+
+58
+00:03:55.880 --> 00:04:00.290
+Perquè el processador l’executa en
+tres passos separats: llegir, restar i
+
+59
+00:04:00.340 --> 00:04:07.800
+escriure. Ara obre les animacions A7.1
+i A7.4 a l’aula i fes el laboratori TD6.

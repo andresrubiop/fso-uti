@@ -1,0 +1,255 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.750
+Alguna vegada un programa se t’ha encallat al
+terminal i has premut Ctrl-C per matar-lo?
+
+2
+00:00:07.800 --> 00:00:10.640
+Aquesta aturada instantània sembla màgia.
+
+3
+00:00:10.720 --> 00:00:13.500
+Però depèn d’un mecanisme molt concret.
+
+4
+00:00:14.000 --> 00:00:18.100
+Quan prems aquestes tecles, el terminal
+envia un senyal al procés en execució.
+
+5
+00:00:18.380 --> 00:00:22.780
+És una notificació asíncrona que diu
+al programa que actuï ara mateix.
+
+6
+00:00:23.020 --> 00:00:25.040
+El principal emissor és el nucli.
+
+7
+00:00:25.300 --> 00:00:29.390
+Si el teu programa accedeix a memòria
+prohibida, el nucli envia el senyal SIGSEGV per
+
+8
+00:00:29.440 --> 00:00:34.190
+acabar-lo. Envia SIGPIPE quan s’escriu
+en una canonada sense lector, o SIGCHLD
+
+9
+00:00:34.240 --> 00:00:35.800
+quan acaba un procés fill.
+
+10
+00:00:36.040 --> 00:00:39.690
+I un procés pot enviar un senyal directament
+a un altre amb la crida al sistema
+
+11
+00:00:39.740 --> 00:00:44.690
+kill. Els senyals són la manera estàndard amb
+què el sistema obliga un procés a reaccionar a
+
+12
+00:00:44.740 --> 00:00:48.750
+esdeveniments externs. Però rebre un senyal
+no vol dir que el teu programa hagi de
+
+13
+00:00:48.800 --> 00:00:52.800
+petar a l’acte. Quan arriba un
+senyal, el teu procés té opcions.
+
+14
+00:00:53.060 --> 00:00:57.430
+Pot acceptar l’acció per defecte, ignorar
+del tot el senyal o capturar-lo amb
+
+15
+00:00:57.480 --> 00:01:00.100
+sigaction per executar
+una funció gestora pròpia.
+
+16
+00:01:00.560 --> 00:01:03.420
+Però aquesta llibertat
+té un límit estricte.
+
+17
+00:01:03.880 --> 00:01:07.850
+SIGKILL i SIGSTOP representen l’autoritat
+última de l’administrador del sistema sobre el
+
+18
+00:01:07.900 --> 00:01:12.930
+maquinari. Com explica el manual, aquests
+dos senyals no es poden capturar mai,
+
+19
+00:01:12.980 --> 00:01:16.720
+ni ignorar ni blocar, es programi
+com es programi el procés.
+
+20
+00:01:17.040 --> 00:01:20.790
+Pots programar una resposta pròpia per a
+gairebé qualsevol interrupció, però el nucli
+
+21
+00:01:20.840 --> 00:01:24.160
+conserva el poder absolut de
+pausar o acabar el teu codi.
+
+22
+00:01:24.460 --> 00:01:27.640
+És clau saber quan fa
+efecte realment un senyal.
+
+23
+00:01:28.160 --> 00:01:31.460
+Cridar kill no executa la
+interrupció a l’instant.
+
+24
+00:01:31.540 --> 00:01:34.500
+Només marca el senyal com
+a pendent dins del nucli.
+
+25
+00:01:34.840 --> 00:01:38.170
+El nucli espera a lliurar el senyal
+pendent fins que el procés torna a creuar
+
+26
+00:01:38.220 --> 00:01:41.460
+cap al mode usuari, per exemple,
+després d’un canvi de context.
+
+27
+00:01:41.640 --> 00:01:46.190
+I si el teu procés està aturat, els
+senyals que arribin, com SIGUSR1,
+
+28
+00:01:46.240 --> 00:01:48.320
+no es perden. Simplement queden blocats.
+
+29
+00:01:48.680 --> 00:01:52.330
+Aquest senyal blocat espera tranquil·lament
+en una cua, fins que el procés
+
+30
+00:01:52.380 --> 00:01:55.220
+rep el senyal SIGCONT i reprèn l’execució.
+
+31
+00:01:55.580 --> 00:01:58.180
+Els senyals no s’esvaeixen en el buit.
+
+32
+00:01:58.680 --> 00:02:02.130
+Tenir en compte aquests lliuraments diferits
+t’ajuda a escriure programari previsible
+
+33
+00:02:02.180 --> 00:02:06.730
+i estable. Com que un gestor propi pot
+pausar el teu programa en qualsevol
+
+34
+00:02:06.780 --> 00:02:10.910
+mil·lisegon, has de seguir regles
+estrictes per no corrompre la teva pròpia
+
+35
+00:02:10.960 --> 00:02:16.450
+memòria. Dins d’un gestor només pots fer servir
+funcions segures davant de senyals asíncrons,
+
+36
+00:02:16.500 --> 00:02:18.220
+com la crida al sistema write.
+
+37
+00:02:18.320 --> 00:02:23.090
+No pots fer servir printf. Si arriba un
+senyal quan el programa principal és a mig
+
+38
+00:02:23.140 --> 00:02:27.410
+omplir una memòria intermèdia de printf, el teu
+gestor tornarà a entrar en aquesta mateixa memòria
+
+39
+00:02:27.460 --> 00:02:29.620
+i destrossarà del tot la sortida.
+
+40
+00:02:29.980 --> 00:02:33.300
+Aquest moment precís crea una
+condició de carrera clàssica.
+
+41
+00:02:33.760 --> 00:02:37.270
+Imagina que el teu programa revisa una
+variable, veu que ha d’esperar i crida
+
+42
+00:02:37.320 --> 00:02:41.810
+pause. Si un senyal arriba en l’instant
+microscòpic abans d’adormir-se, el gestor s’executa
+
+43
+00:02:41.860 --> 00:02:46.540
+abans d’hora. Llavors el procés dorm per
+sempre, esperant un senyal que ja ha rebut.
+
+44
+00:02:46.860 --> 00:02:48.920
+La solució és un ordre estricte.
+
+45
+00:02:49.050 --> 00:02:53.730
+Primer bloques el senyal amb sigprocmask,
+revises la condició amb seguretat i després
+
+46
+00:02:53.780 --> 00:02:58.350
+crides sigsuspend. sigsuspend funciona perquè
+substitueix la màscara i adorm el procés
+
+47
+00:02:58.400 --> 00:03:01.400
+en una sola operació atòmica.
+
+48
+00:03:01.560 --> 00:03:04.500
+El nucli garanteix que cap senyal
+no s’escoli per les escletxes.
+
+49
+00:03:04.860 --> 00:03:08.600
+Repassem. Quins dos senyals no es
+poden capturar ni ignorar mai?
+
+50
+00:03:09.040 --> 00:03:11.860
+Les respostes exactes
+són SIGKILL i SIGSTOP.
+
+51
+00:03:12.080 --> 00:03:16.380
+Per què cal fer servir sigsuspend en lloc de
+revisar una variable i després adormir-se?
+
+52
+00:03:16.500 --> 00:03:20.660
+Per evitar la condició de carrera en què
+el senyal arriba just abans d’adormir-se.
+
+53
+00:03:21.060 --> 00:03:26.240
+Ara obre l’animació A6.1 a
+l’aula i fes el laboratori TD5.

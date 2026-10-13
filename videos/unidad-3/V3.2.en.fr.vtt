@@ -1,0 +1,321 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:05.200
+Regardez ce montage simple.
+
+2
+00:00:05.580 --> 00:00:09.610
+Un processus ordinaire essaie de lire
+un fichier qui contient exactement huit
+
+3
+00:00:09.660 --> 00:00:11.880
+caractères, de A à H.
+
+4
+00:00:12.120 --> 00:00:17.030
+Pour le premier essai, le processus
+appelle open deux fois sur le même fichier
+
+5
+00:00:17.080 --> 00:00:19.300
+et obtient deux descripteurs différents.
+
+6
+00:00:19.600 --> 00:00:23.500
+Si on lit quatre octets sur le
+premier descripteur, on obtient ABCD.
+
+7
+00:00:23.640 --> 00:00:27.710
+Si on lit quatre octets sur le second,
+on obtient exactement le même texte.
+
+8
+00:00:27.760 --> 00:00:31.280
+La sortie finale est ABCD, ABCD.
+
+9
+00:00:31.680 --> 00:00:34.500
+Changeons maintenant
+une seule ligne de code.
+
+10
+00:00:34.780 --> 00:00:39.010
+Au lieu d’ouvrir le fichier une seconde
+fois, on utilise l’appel système dup pour
+
+11
+00:00:39.060 --> 00:00:40.720
+dupliquer le premier descripteur.
+
+12
+00:00:40.980 --> 00:00:45.890
+La première lecture donne toujours ABCD, mais
+la seconde reprend exactement là où la première
+
+13
+00:00:45.940 --> 00:00:48.640
+s’est arrêtée et lit EFGH.
+
+14
+00:00:48.980 --> 00:00:52.080
+La sortie finale est
+maintenant ABCD, EFGH.
+
+15
+00:00:52.520 --> 00:00:56.700
+Pourquoi changer un seul appel système
+modifie-t-il complètement la lecture du fichier ?
+
+16
+00:00:56.920 --> 00:01:00.300
+Pour répondre, il faut regarder
+sous la frontière de privilèges.
+
+17
+00:01:00.680 --> 00:01:03.260
+Examinons l’architecture
+du système d’exploitation.
+
+18
+00:01:03.760 --> 00:01:07.180
+Au-dessus de la frontière, le mode
+utilisateur, où tourne notre programme.
+
+19
+00:01:07.400 --> 00:01:11.130
+Sous la ligne, le mode noyau, où le
+noyau contrôle strictement l’accès au
+
+20
+00:01:11.180 --> 00:01:15.900
+matériel. Quand vous lisez un fichier, votre
+processus s’appuie sur trois tables cachées.
+
+21
+00:01:16.120 --> 00:01:18.120
+La première est la table des descripteurs.
+
+22
+00:01:18.180 --> 00:01:21.860
+Le noyau tient une table des
+descripteurs propre à chaque processus.
+
+23
+00:01:22.380 --> 00:01:24.960
+Ensuite, la table des fichiers
+ouverts, commune au système.
+
+24
+00:01:25.100 --> 00:01:29.250
+Cette table garde la position courante
+: l’octet exact où aura lieu la
+
+25
+00:01:29.300 --> 00:01:31.500
+prochaine lecture ou écriture.
+
+26
+00:01:31.960 --> 00:01:35.340
+Enfin, tout en bas, la
+table des inodes en mémoire.
+
+27
+00:01:35.460 --> 00:01:39.780
+C’est l’unique représentation active des
+métadonnées du fichier, chargée en RAM.
+
+28
+00:01:40.080 --> 00:01:44.650
+Quand un programme appelle open deux fois, le
+noyau crée deux entrées complètement séparées
+
+29
+00:01:44.700 --> 00:01:49.210
+dans la table des fichiers ouverts. Chaque
+entrée a sa propre position, qui commence à
+
+30
+00:01:49.260 --> 00:01:53.240
+zéro. C’est pourquoi les deux
+descripteurs lisent le début du fichier.
+
+31
+00:01:53.620 --> 00:01:55.700
+L’appel système dup fonctionne autrement.
+
+32
+00:01:55.860 --> 00:01:58.600
+Il copie simplement le pointeur
+dans la table des descripteurs.
+
+33
+00:01:58.820 --> 00:02:02.820
+Les deux descripteurs pointent alors vers la
+même entrée de la table des fichiers ouverts.
+
+34
+00:02:03.040 --> 00:02:07.200
+Comme ils partagent une seule description de
+fichier ouvert, ils partagent la position.
+
+35
+00:02:07.420 --> 00:02:10.980
+Quand une lecture avance la position,
+l’autre descripteur voit le changement.
+
+36
+00:02:11.120 --> 00:02:15.810
+C’est exactement le mécanisme qu’utilise votre
+shell pour rediriger la sortie d’erreur et la
+
+37
+00:02:15.860 --> 00:02:18.000
+sortie standard vers un
+seul fichier journal.
+
+38
+00:02:18.400 --> 00:02:22.550
+Voyez ce qui arrive à cette structure si
+un fichier a un inode mais aucun bloc
+
+39
+00:02:22.600 --> 00:02:26.520
+de données sur le disque.
+C’est une FIFO, ou tube nommé.
+
+40
+00:02:26.860 --> 00:02:31.910
+Au lieu d’écrire sur un disque, une FIFO fait
+passer les données par un tampon de 64 kilo-octets
+
+41
+00:02:31.960 --> 00:02:35.320
+situé entièrement dans
+la mémoire du noyau.
+
+42
+00:02:35.600 --> 00:02:39.630
+Comme ce tube vit en mémoire, il impose
+des règles strictes pour garder les données
+
+43
+00:02:39.680 --> 00:02:45.100
+synchronisées. Si un processus appelle open pour
+lire une FIFO, il se bloque volontairement.
+
+44
+00:02:45.320 --> 00:02:48.940
+Le noyau le fait attendre jusqu’à ce qu’un
+autre processus ouvre le tube en écriture.
+
+45
+00:02:49.360 --> 00:02:52.700
+Une fois la connexion établie,
+l’écriture est très encadrée.
+
+46
+00:02:52.960 --> 00:02:57.540
+Sous Linux, toute écriture de 4096
+octets ou moins est atomique.
+
+47
+00:02:57.780 --> 00:03:01.870
+Le noyau insère ces blocs proprement et
+garantit que les messages de différents
+
+48
+00:03:01.920 --> 00:03:03.440
+écrivains ne se mélangent jamais.
+
+49
+00:03:05.080 --> 00:03:09.330
+Et quand le dernier écrivain ferme son
+descripteur, le lecteur reçoit simplement un zéro,
+
+50
+00:03:09.380 --> 00:03:11.260
+qui indique la fin du fichier.
+
+51
+00:03:11.660 --> 00:03:16.390
+Le noyau gère une communication interprocessus
+complexe avec la même architecture à trois
+
+52
+00:03:16.440 --> 00:03:19.880
+tables, même sans aucun disque.
+
+53
+00:03:20.260 --> 00:03:22.720
+Testons ces règles avec un cas pratique.
+
+54
+00:03:23.020 --> 00:03:27.730
+Que se passe-t-il si on crée une FIFO dans un
+dossier partagé en réseau pour s’en servir comme
+
+55
+00:03:27.780 --> 00:03:30.220
+tube de discussion entre
+deux portables différents ?
+
+56
+00:03:30.420 --> 00:03:35.050
+La connexion échoue. Un dossier partagé en
+réseau ne diffuse que le nom du fichier
+
+57
+00:03:35.100 --> 00:03:38.800
+aux autres machines. Il ne peut pas
+partager la mémoire du noyau sous-jacente.
+
+58
+00:03:39.100 --> 00:03:43.430
+Quand chaque portable ouvre ce chemin
+réseau, son système d’exploitation local crée
+
+59
+00:03:43.480 --> 00:03:46.440
+son propre tampon isolé de 64 kilo-octets.
+
+60
+00:03:46.700 --> 00:03:48.880
+Les deux machines ne se
+connectent jamais vraiment.
+
+61
+00:03:49.140 --> 00:03:54.150
+Un fichier est un objet vivant, géré activement
+et exclusivement dans les limites du
+
+62
+00:03:54.200 --> 00:03:56.620
+noyau d’une machine locale. Récapitulons.
+
+63
+00:03:56.880 --> 00:04:01.210
+Quand un processus appelle dup, quelle entrée
+du noyau est partagée pour garder la position
+
+64
+00:04:01.260 --> 00:04:07.430
+synchronisée ? La description de fichier ouvert.
+Pourquoi une FIFO ne peut-elle pas relier deux
+
+65
+00:04:07.480 --> 00:04:09.960
+ordinateurs par un
+lecteur réseau partagé ?
+
+66
+00:04:10.340 --> 00:04:15.480
+Parce que le tube existe entièrement dans le
+noyau de la machine locale, pas sur le disque.
+
+67
+00:04:15.980 --> 00:04:23.020
+Ouvrez maintenant les animations A3.2 et A3.3 dans
+le cours en ligne et faites le laboratoire TD2.

@@ -1,0 +1,353 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.060
+Imagina que executes un
+programa client senzill.
+
+2
+00:00:06.180 --> 00:00:10.330
+Gairebé a l’instant, travessa la
+xarxa i estableix una connexió
+
+3
+00:00:10.380 --> 00:00:13.940
+amb èxit. Però a la màquina
+del servidor hi ha un retard.
+
+4
+00:00:14.300 --> 00:00:18.230
+El codi del servidor encara s’està inicialitzant
+i ni tan sols ha arribat a la línia
+
+5
+00:00:18.280 --> 00:00:20.260
+que accepta connexions noves.
+
+6
+00:00:20.760 --> 00:00:26.210
+Llavors, si l’aplicació del servidor
+encara no ha acceptat la connexió, qui o
+
+7
+00:00:26.260 --> 00:00:28.580
+què ha respost la trucada?
+
+8
+00:00:29.240 --> 00:00:34.130
+Per resoldre aquest misteri de temps, cal
+veure com funciona la xarxa en una capa
+
+9
+00:00:34.180 --> 00:00:38.720
+oculta del sistema, a través d’un punt
+de comunicació concret anomenat sòcol.
+
+10
+00:00:39.240 --> 00:00:41.980
+Un sòcol és l’extrem d’una comunicació.
+
+11
+00:00:42.340 --> 00:00:46.580
+Quan un programa en crea un, el sistema
+operatiu retorna un descriptor de fitxer.
+
+12
+00:00:46.860 --> 00:00:52.050
+Fas servir aquest descriptor amb crides al sistema
+bàsiques com read, write i close, exactament
+
+13
+00:00:52.100 --> 00:00:55.600
+igual que amb una canonada. Hi
+ha sòcols de diversos tipus.
+
+14
+00:00:55.840 --> 00:00:59.580
+Un protocol sense connexió, com
+UDP, envia datagrames independents.
+
+15
+00:01:00.060 --> 00:01:01.920
+Es comporta com enviar un telegrama.
+
+16
+00:01:02.140 --> 00:01:05.480
+Les dades es poden perdre,
+duplicar o arribar desordenades.
+
+17
+00:01:05.720 --> 00:01:07.260
+I cap de les dues bandes no rep cap error.
+
+18
+00:01:07.760 --> 00:01:11.520
+Després hi ha TCP. És un
+protocol amb connexió.
+
+19
+00:01:11.800 --> 00:01:16.350
+Un cop establerta la connexió, garanteix
+un flux de bytes fiable i ordenat entre
+
+20
+00:01:16.400 --> 00:01:20.890
+les dues màquines. Com que el nostre misteri
+inicial tracta d’una connexió reeixida i garantida,
+
+21
+00:01:20.940 --> 00:01:23.900
+aquestes màquines fan servir TCP.
+
+22
+00:01:24.220 --> 00:01:28.170
+Hi ha hagut un establiment formal de la connexió
+entre bastidors, totalment independent de
+
+23
+00:01:28.220 --> 00:01:32.780
+l’aplicació del servidor. Vegem
+l’estructura del sistema operatiu.
+
+24
+00:01:33.080 --> 00:01:36.940
+El procés del servidor corre en mode
+usuari, sobre la frontera de privilegis.
+
+25
+00:01:37.120 --> 00:01:41.380
+El cor del sistema, el nucli, treballa
+a l’espai restringit de sota.
+
+26
+00:01:41.740 --> 00:01:45.350
+Per començar, el procés del servidor
+crea un sòcol i crida bind.
+
+27
+00:01:45.400 --> 00:01:50.130
+Així baixa al nucli una petició per
+assignar a aquest sòcol una adreça de xarxa
+
+28
+00:01:50.180 --> 00:01:54.600
+i un port local. Però aquí hi
+ha un conflicte de maquinari.
+
+29
+00:01:55.020 --> 00:02:00.470
+Un processador x86-64 desa els números en
+ordre little-endian, amb els bytes del darrere
+
+30
+00:02:00.520 --> 00:02:04.880
+cap endavant. El protocol de xarxa
+exigeix estrictament l’ordre big-endian.
+
+31
+00:02:05.000 --> 00:02:10.270
+Si un programador oblida fer servir la funció
+htons per traduir els bytes, apareix un error
+
+32
+00:02:10.320 --> 00:02:17.190
+greu. El processador inverteix els bytes
+del port 7000, que és 1B58 en hexadecimal, i
+
+33
+00:02:17.240 --> 00:02:21.300
+el servidor acaba enllaçat
+per accident al port 22555.
+
+34
+00:02:21.700 --> 00:02:26.310
+Aquesta traducció obligatòria de dades
+mostra que l’aplicació depèn del tot de la
+
+35
+00:02:26.360 --> 00:02:30.890
+pila de xarxa del nucli. Ha de donar a
+les seves peticions el format exacte que
+
+36
+00:02:30.940 --> 00:02:35.950
+espera el nucli. Un cop enllaçada
+l’adreça, l’aplicació del servidor crida
+
+37
+00:02:36.000 --> 00:02:40.630
+listen. Això posa el sòcol en estat
+passiu i indica al nucli que vigili
+
+38
+00:02:40.680 --> 00:02:42.600
+aquest port per si arriba trànsit.
+
+39
+00:02:42.900 --> 00:02:46.990
+A la màquina remota, l’aplicació
+client crea el seu propi sòcol i envia
+
+40
+00:02:47.040 --> 00:02:49.800
+una petició connect adreçada al servidor.
+
+41
+00:02:50.120 --> 00:02:52.460
+Tornem ara al nostre misteri inicial.
+
+42
+00:02:52.700 --> 00:02:56.270
+El nucli del servidor rep aquesta
+petició sota la frontera de privilegis.
+
+43
+00:02:56.320 --> 00:02:58.840
+Encara no desperta
+l’aplicació del servidor.
+
+44
+00:02:58.940 --> 00:03:01.370
+En canvi, els dos nuclis
+es comuniquen directament.
+
+45
+00:03:01.420 --> 00:03:04.520
+Fan la salutació de tres passos de TCP.
+
+46
+00:03:04.800 --> 00:03:09.280
+SYN del client, SYN-ACK del
+servidor i un ACK final del client.
+
+47
+00:03:09.520 --> 00:03:13.390
+En acabar, el nucli del servidor posa
+la connexió establerta en una cua
+
+48
+00:03:13.440 --> 00:03:17.800
+d’acceptació. Quan l’aplicació del
+servidor per fi està a punt, crida accept.
+
+49
+00:03:17.960 --> 00:03:20.670
+No fa ella mateixa la salutació de xarxa.
+
+50
+00:03:20.720 --> 00:03:23.620
+Simplement treu de la cua
+aquella connexió que espera.
+
+51
+00:03:23.860 --> 00:03:28.110
+La funció accept agafa aquella connexió
+establerta i retorna un descriptor de fitxer
+
+52
+00:03:28.160 --> 00:03:32.810
+totalment nou. Aquest nou descriptor es
+dedica només a parlar amb aquell client
+
+53
+00:03:32.860 --> 00:03:36.400
+concret, mentre el sòcol original
+continua escoltant els altres.
+
+54
+00:03:36.840 --> 00:03:40.740
+Quan s’acaba la comunicació, tancar
+la connexió és un procés simètric.
+
+55
+00:03:40.920 --> 00:03:43.580
+Comença tan bon punt qualsevol
+de les dues bandes crida close.
+
+56
+00:03:43.960 --> 00:03:48.030
+El sistema que inicia el tancament passa
+per una seqüència concreta i entra en un
+
+57
+00:03:48.080 --> 00:03:49.760
+estat anomenat TIME_WAIT.
+
+58
+00:03:49.900 --> 00:03:54.150
+Funciona com un marge de seguretat per atrapar els
+paquets de xarxa perduts i retardats que encara
+
+59
+00:03:54.200 --> 00:03:55.310
+viatgen per internet.
+
+60
+00:03:55.360 --> 00:04:00.590
+A Linux, aquesta entrada TIME_WAIT
+sobreviu al nucli 60 segons
+
+61
+00:04:00.640 --> 00:04:02.550
+després que acabi el programa mateix.
+
+62
+00:04:02.600 --> 00:04:05.380
+Això causa un problema habitual
+durant el desenvolupament.
+
+63
+00:04:05.620 --> 00:04:11.150
+Si atures el servidor i el tornes a engegar
+de seguida, falla amb un error EADDRINUSE.
+
+64
+00:04:11.200 --> 00:04:15.920
+El port no es pot enllaçar perquè
+el nucli encara el té retingut.
+
+65
+00:04:16.240 --> 00:04:21.590
+Per resoldre-ho, el programador ha d’activar
+explícitament l’opció SO_REUSEADDR abans
+
+66
+00:04:21.640 --> 00:04:25.520
+d’enllaçar. Això demostra la
+regla general dels sòcols.
+
+67
+00:04:25.840 --> 00:04:30.070
+Des de la primera salutació fins al tancament
+final, el nucli controla el cicle de vida
+
+68
+00:04:30.120 --> 00:04:32.280
+del port. No l’aplicació.
+
+69
+00:04:33.220 --> 00:04:37.150
+Pregunta u. Quina funció retorna un nou
+descriptor de fitxer per a una connexió
+
+70
+00:04:37.200 --> 00:04:40.600
+establerta? La funció que ho fa és accept.
+
+71
+00:04:41.400 --> 00:04:45.640
+Pregunta dos. Quina capa completa
+la salutació de tres passos de TCP?
+
+72
+00:04:45.800 --> 00:04:47.580
+L’aplicació o el nucli?
+
+73
+00:04:47.980 --> 00:04:50.460
+La capa que la completa és el nucli.
+
+74
+00:04:50.880 --> 00:04:56.260
+Ara obre l’animació A8.1 a
+l’aula i fes el laboratori TD7.

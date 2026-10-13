@@ -1,0 +1,290 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.890
+Dans le laboratoire TD6, on confie à 8 programmes
+le rôle de vendeurs concurrents de billets, avec
+
+2
+00:00:08.940 --> 00:00:11.440
+un stock partagé de 100 000 billets.
+
+3
+00:00:11.780 --> 00:00:14.820
+Mais en lisant cette sortie du terminal,
+les comptes ne tombent pas juste.
+
+4
+00:00:15.020 --> 00:00:21.440
+Ils ont vendu 103 195 billets, et
+le solde est négatif : moins 7.
+
+5
+00:00:21.620 --> 00:00:24.260
+Le code s’est exécuté exactement
+comme il était écrit.
+
+6
+00:00:24.480 --> 00:00:26.880
+Les vendeurs sont simplement
+des threads d’un processus C.
+
+7
+00:00:27.020 --> 00:00:30.970
+Vous voyez ici la soustraction,
+tickets--, qui s’exécute dans
+
+8
+00:00:31.020 --> 00:00:36.890
+une boucle while. Comment un ordinateur peut-il exécuter
+correctement une soustraction et pourtant vendre plus
+
+9
+00:00:36.940 --> 00:00:38.820
+d’articles qu’il n’en existe ?
+
+10
+00:00:39.240 --> 00:00:41.820
+La réponse tient à la façon
+dont les threads s’exécutent.
+
+11
+00:00:42.240 --> 00:00:46.910
+L’illusion d’exécution simultanée crée des
+angles morts cachés qui corrompent en silence
+
+12
+00:00:46.960 --> 00:00:52.140
+vos données. Les développeurs utilisent des threads
+plutôt que des processus complets pour une raison :
+
+13
+00:00:52.300 --> 00:00:57.830
+la vitesse. Comme le montre cette sortie, créer
+un processus sur la machine du cours prend 248,8
+
+14
+00:00:57.880 --> 00:01:02.980
+microsecondes. C’est 6,0 fois
+plus que créer un seul thread.
+
+15
+00:01:03.560 --> 00:01:05.940
+Les threads sont plus rapides parce
+qu’ils ne copient pas de données.
+
+16
+00:01:06.380 --> 00:01:10.720
+Dans l’architecture, le mode utilisateur est
+au-dessus de la frontière, le mode noyau en dessous.
+
+17
+00:01:10.940 --> 00:01:14.040
+Dans un processus utilisateur,
+les threads travaillent ensemble.
+
+18
+00:01:14.180 --> 00:01:19.000
+Ils partagent tout l’espace d’adressage :
+code, descripteurs, tas et données globales.
+
+19
+00:01:19.300 --> 00:01:23.240
+Mais chaque thread garde sa propre pile
+privée et ses propres registres matériels.
+
+20
+00:01:23.540 --> 00:01:28.100
+Cette architecture à mémoire partagée
+est rapide, mais physiquement vulnérable.
+
+21
+00:01:28.340 --> 00:01:32.210
+Comme il n’y a aucune protection mémoire
+entre eux, un bogue dans un thread peut
+
+22
+00:01:32.260 --> 00:01:34.380
+corrompre instantanément
+les données de tous.
+
+23
+00:01:34.660 --> 00:01:38.450
+Revenons à cette ligne de code C responsable
+de la soustraction lors de la vente
+
+24
+00:01:38.500 --> 00:01:44.430
+des billets. Pour un processeur x86-64,
+une seule ligne de C n’est pas une seule
+
+25
+00:01:44.480 --> 00:01:49.340
+étape atomique. Le matériel découpe la
+soustraction en trois étapes distinctes :
+
+26
+00:01:49.400 --> 00:01:53.690
+lire la variable de la mémoire vers un
+registre, soustraire un et réécrire la
+
+27
+00:01:53.740 --> 00:01:57.970
+nouvelle valeur en mémoire. Le problème
+survient quand deux threads distincts tentent
+
+28
+00:01:58.020 --> 00:02:00.220
+d’exécuter ces étapes
+exactement en même temps.
+
+29
+00:02:00.440 --> 00:02:04.770
+Si le thread A et le thread B font la
+lecture simultanément, tous deux récupèrent
+
+30
+00:02:04.820 --> 00:02:06.960
+le même nombre de départ en mémoire.
+
+31
+00:02:07.460 --> 00:02:12.010
+Puis tous deux soustraient un dans leurs
+registres privés, et tous deux réécrivent
+
+32
+00:02:12.060 --> 00:02:14.900
+le même nombre mis à jour
+en mémoire partagée.
+
+33
+00:02:15.220 --> 00:02:17.620
+Une écriture écrase complètement l’autre.
+
+34
+00:02:17.880 --> 00:02:20.660
+Cette collision temporelle
+est une condition de course.
+
+35
+00:02:21.360 --> 00:02:25.710
+Comme l’ordonnanceur peut entrelacer ces étapes
+matérielles dans n’importe quel ordre, les lectures
+
+36
+00:02:25.760 --> 00:02:28.480
+et écritures simples ne sont pas
+sûres sur des données partagées.
+
+37
+00:02:28.780 --> 00:02:33.550
+Pour corriger cela, il faut une section critique
+: un fragment de code protégé qu’un seul
+
+38
+00:02:33.600 --> 00:02:36.740
+thread peut exécuter à la fois,
+pour garantir l’exclusion mutuelle.
+
+39
+00:02:37.040 --> 00:02:42.140
+L’outil standard pour imposer cette frontière
+est la fonction POSIX pthread_mutex_lock.
+
+40
+00:02:42.440 --> 00:02:46.530
+Comme le montre ce code, celui qui prend le
+verrou exécute son opération en trois étapes
+
+41
+00:02:46.580 --> 00:02:51.720
+sans interruption. Si un autre thread arrive,
+il dort jusqu’à ce que le mutex soit libéré.
+
+42
+00:02:52.180 --> 00:02:54.900
+Exécuter ce code protégé
+donne le bon résultat.
+
+43
+00:02:55.080 --> 00:02:59.970
+La sortie indique maintenant exactement
+100 000 billets vendus, sans
+
+44
+00:03:00.020 --> 00:03:04.040
+mise à jour perdue. Un mutex agit comme
+un goulot d’étranglement physique strict.
+
+45
+00:03:04.200 --> 00:03:08.120
+Il échange la vitesse parallèle maximale
+contre une intégrité des données garantie.
+
+46
+00:03:08.520 --> 00:03:12.780
+Il existe une alternative structurellement
+différente au verrou : le sémaphore.
+
+47
+00:03:12.900 --> 00:03:17.330
+Un sémaphore est un entier doté d’opérations
+atomiques par nature, intégrées au
+
+48
+00:03:17.380 --> 00:03:21.890
+matériel. Au lieu de verrouiller une section de
+code séparée pour mettre à jour une variable, le
+
+49
+00:03:21.940 --> 00:03:24.360
+sémaphore est lui-même
+le compteur de billets.
+
+50
+00:03:24.520 --> 00:03:28.970
+Une fonction comme sem_trywait teste
+l’entier et lui soustrait un en une seule
+
+51
+00:03:29.020 --> 00:03:33.410
+étape indivisible. Les instructions
+atomiques du matériel éliminent complètement
+
+52
+00:03:33.460 --> 00:03:36.740
+les états intermédiaires où
+prospèrent les conditions de course.
+
+53
+00:03:37.320 --> 00:03:41.070
+Récapitulons. Quelle mémoire un thread
+partage-t-il avec les autres threads du même
+
+54
+00:03:41.120 --> 00:03:43.380
+processus, et que garde-t-il en privé ?
+
+55
+00:03:43.660 --> 00:03:48.110
+Ils partagent le code, les données globales, le
+tas et les descripteurs, mais chacun a sa propre
+
+56
+00:03:48.160 --> 00:03:49.940
+pile privée et ses registres.
+
+57
+00:03:50.580 --> 00:03:55.540
+Question deux : pourquoi soustraire une variable
+partagée en C n’est-il pas une opération atomique ?
+
+58
+00:03:55.880 --> 00:04:00.290
+Parce que le processeur l’exécute en trois
+étapes séparées : lire, soustraire et
+
+59
+00:04:00.340 --> 00:04:07.800
+écrire. Ouvrez maintenant les animations A7.1 et A7.4
+dans le cours en ligne et faites le laboratoire TD6.

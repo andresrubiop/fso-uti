@@ -1,0 +1,300 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.960
+Un agent d’IA és només un altre procés
+del sistema, però amb una feina singular.
+
+2
+00:00:08.020 --> 00:00:10.100
+Actua en nom teu.
+
+3
+00:00:10.840 --> 00:00:13.470
+En aquesta unitat fem servir un micro-LLM.
+
+4
+00:00:13.520 --> 00:00:19.450
+Té exactament 175 000 paràmetres, i la seva
+única tasca és traduir una petició en anglès o
+
+5
+00:00:19.500 --> 00:00:22.460
+en castellà a una crida a eina concreta.
+
+6
+00:00:22.740 --> 00:00:27.010
+Però un model de llenguatge és un motor
+estadístic, no un programa determinista.
+
+7
+00:00:27.060 --> 00:00:32.590
+Pot al·lucinar una ordre amb facilitat o ser
+manipulat per una instrucció oculta en un
+
+8
+00:00:32.640 --> 00:00:36.220
+document que llegeix, un atac
+anomenat injecció d’instruccions.
+
+9
+00:00:36.660 --> 00:00:41.390
+Com que la sortida és simplement text no fiable,
+el sistema operatiu no pot donar per fet que
+
+10
+00:00:41.440 --> 00:00:42.980
+les decisions de l’agent són segures.
+
+11
+00:00:43.320 --> 00:00:47.520
+Per comprovar-ho, farem una prova de
+penetració al nostre propi sistema.
+
+12
+00:00:47.740 --> 00:00:50.930
+Comencem donant a l’agent una
+petició maliciosa a propòsit.
+
+13
+00:00:50.980 --> 00:00:57.380
+Li demanem que llegeixi el fitxer de
+contrasenyes, molt sensible, /etc/passwd.
+
+14
+00:00:57.740 --> 00:00:59.720
+El model fa la seva feina perfectament.
+
+15
+00:00:59.940 --> 00:01:04.320
+Tradueix la intenció maliciosa i genera
+exactament la crida a eina demanada,
+
+16
+00:01:04.380 --> 00:01:05.880
+adreçada a aquest fitxer protegit.
+
+17
+00:01:06.140 --> 00:01:10.440
+Encara que l’usuari hagi iniciat l’agent,
+l’agent és una entitat independent.
+
+18
+00:01:10.760 --> 00:01:14.900
+El sistema no li concedeix automàticament
+tota la confiança operativa de l’usuari.
+
+19
+00:01:15.260 --> 00:01:17.940
+Això ens porta a la regla central
+de la nostra arquitectura.
+
+20
+00:01:18.120 --> 00:01:23.550
+El model d’IA proposa una acció, però el
+sistema operatiu disposa i decideix si aquesta
+
+21
+00:01:23.600 --> 00:01:25.500
+acció es pot executar de debò.
+
+22
+00:01:25.920 --> 00:01:31.190
+Aquest text no fiable viatja per un sòcol
+Unix amb permisos 0600 directament fins
+
+23
+00:01:31.240 --> 00:01:35.830
+al dimoni agentd. Aquest gestor central fa
+servir un grup de fils per atendre peticions
+
+24
+00:01:35.880 --> 00:01:40.980
+concurrents. En lloc de preguntar a l’agent,
+agentd pregunta directament al nucli.
+
+25
+00:01:41.360 --> 00:01:45.380
+Amb SO_PEERCRED obté
+l’UID i el PID del client.
+
+26
+00:01:45.620 --> 00:01:50.280
+Cada decisió i cada acció queden registrades
+per sempre en un registre d’auditoria.
+
+27
+00:01:50.740 --> 00:01:54.930
+Abans de considerar cap acció, el
+sistema exigeix que el nucli verifiqui la
+
+28
+00:01:54.980 --> 00:01:57.940
+identitat de qui crida i
+deixa un rastre permanent.
+
+29
+00:01:58.820 --> 00:02:01.700
+Normalment, la petició passa
+després per una capa de polítiques.
+
+30
+00:02:01.840 --> 00:02:06.210
+El dimoni analitza el text, el compara
+amb un catàleg tancat d’eines i obliga
+
+31
+00:02:06.260 --> 00:02:09.440
+que tots els camins es quedin dins
+de l’espai de treball de l’agent.
+
+32
+00:02:09.560 --> 00:02:14.410
+Si l’acció és destructiva, la política ho
+atura tot per demanar a l’usuari el seu
+
+33
+00:02:14.460 --> 00:02:19.970
+consentiment explícit. Però, per provar la
+veritable resistència del nostre sistema operatiu,
+
+34
+00:02:20.020 --> 00:02:23.340
+desactivarem a propòsit
+aquest motor de polítiques.
+
+35
+00:02:23.640 --> 00:02:28.130
+Amb el guardià de l’aplicació apagat, la
+nostra petició maliciosa de llegir el
+
+36
+00:02:28.180 --> 00:02:32.200
+fitxer de contrasenyes s’escola sense
+problemes i avança lliurement cap a l’execució.
+
+37
+00:02:32.720 --> 00:02:37.090
+Treure aquesta xarxa de seguretat mostra per
+què dependre d’una sola capa de seguretat
+
+38
+00:02:37.140 --> 00:02:40.020
+de l’aplicació deixa un
+sistema molt vulnerable.
+
+39
+00:02:40.540 --> 00:02:44.140
+La petició arriba al programa
+executor, agent_exec.
+
+40
+00:02:44.400 --> 00:02:49.490
+Es prepara per executar l’eina creant un
+procés nou amb les crides al sistema fork i
+
+41
+00:02:49.540 --> 00:02:54.530
+execve. Immediatament aplica límits
+estrictes de memòria i de descriptors amb
+
+42
+00:02:54.580 --> 00:03:00.160
+setrlimit, i posa una alarma per garantir
+que el codi no fiable no corri sense fi.
+
+43
+00:03:00.780 --> 00:03:05.690
+Ara aquest procés tan restringit està
+aïllat, preparat i a punt per executar
+
+44
+00:03:05.740 --> 00:03:07.320
+l’atac contra el fitxer del sistema.
+
+45
+00:03:07.760 --> 00:03:11.450
+Encara que aquests límits de recursos impedeixen
+que la màquina caigui, no fan absolutament
+
+46
+00:03:11.500 --> 00:03:15.620
+res per evitar que el procés obri
+i llegeixi dades protegides.
+
+47
+00:03:15.840 --> 00:03:17.620
+Arriba l’hora de la veritat.
+
+48
+00:03:17.860 --> 00:03:22.530
+El procés rebel aïllat intenta per fi
+executar l’ordre per obrir /etc/passwd.
+
+49
+00:03:22.580 --> 00:03:28.290
+Per fer-ho, el procés, que viu a
+dalt, en mode usuari, ha de creuar la
+
+50
+00:03:28.340 --> 00:03:31.780
+frontera de privilegis cap al mode
+nucli per accedir a un fitxer.
+
+51
+00:03:32.120 --> 00:03:34.900
+Aquí el nucli intervé de manera decisiva.
+
+52
+00:03:35.300 --> 00:03:40.330
+Com que agent_exec ha aplicat abans un entorn
+aïllat de Landlock, el nucli denega rotundament
+
+53
+00:03:40.380 --> 00:03:44.300
+la petició d’accés. Aquesta és la
+característica que defineix Landlock.
+
+54
+00:03:44.600 --> 00:03:49.010
+Un cop un procés s’ha restringit, aquest
+entorn aïllat s’hereta per sempre i no es pot
+
+55
+00:03:49.060 --> 00:03:51.860
+desfer, encara que falli la
+política de l’aplicació.
+
+56
+00:03:52.440 --> 00:03:56.660
+La veritable defensa en profunditat consisteix a
+suposar que tota capa de l’aplicació acabarà fallant.
+
+57
+00:03:56.740 --> 00:04:01.600
+Quan passa, l’entorn aïllat del nucli queda
+com l’autoritat última, impossible de saltar.
+
+58
+00:04:01.980 --> 00:04:07.310
+Repassem. Primer, quina opció de sòcol
+dona al dimoni la identitat exacta
+
+59
+00:04:07.360 --> 00:04:10.600
+del client? És SO_PEERCRED.
+
+60
+00:04:10.920 --> 00:04:15.920
+Segon, quina primitiva de Linux actua com l’entorn
+aïllat final del nucli per aturar l’agent?
+
+61
+00:04:16.160 --> 00:04:22.890
+És Landlock. Ara obre les
+animacions A9.2 i A9.4 a l’aula
+
+62
+00:04:22.940 --> 00:04:26.740
+i fes el laboratori TD8
+amb el seu repte d’IA.

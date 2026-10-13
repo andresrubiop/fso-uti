@@ -1,0 +1,306 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.550
+Un servidor de xarxa viu
+en un equilibri constant.
+
+2
+00:00:06.600 --> 00:00:10.930
+Ha d’atendre dades de centenars
+de connexions alhora sense
+
+3
+00:00:10.980 --> 00:00:14.080
+deixar que un client lent
+encalli tot el sistema.
+
+4
+00:00:14.500 --> 00:00:17.040
+Podem mesurar aquest
+problema al laboratori TD7.
+
+5
+00:00:17.380 --> 00:00:20.480
+Enviem 32 clients alhora
+a un servidor web.
+
+6
+00:00:21.000 --> 00:00:25.430
+24 envien les peticions a l’instant,
+però vuit són lents a propòsit
+
+7
+00:00:25.480 --> 00:00:27.980
+i triguen un segon sencer
+a transmetre les dades.
+
+8
+00:00:28.420 --> 00:00:30.760
+Comencem amb un model
+de servidor iteratiu.
+
+9
+00:00:30.840 --> 00:00:35.920
+Funciona amb un sol fil i processa
+exactament una connexió alhora.
+
+10
+00:00:36.160 --> 00:00:39.990
+Mentre el servidor està ocupat amb el primer
+client, les altres 31 connexions completen
+
+11
+00:00:40.040 --> 00:00:41.340
+la seva salutació de tres passos.
+
+12
+00:00:41.620 --> 00:00:45.510
+El nucli marca la seva connexió com a
+establerta, però queden atrapades esperant a
+
+13
+00:00:45.560 --> 00:00:47.620
+la cua d’acceptació del sòcol que escolta.
+
+14
+00:00:48.000 --> 00:00:50.780
+Aquesta sortida del terminal mostra
+el resultat d’aquest retard.
+
+15
+00:00:51.040 --> 00:00:56.450
+Els nostres clients ràpids esperen una mediana
+de 982 mil·lisegons només per rebre resposta,
+
+16
+00:00:56.500 --> 00:00:58.900
+simplement perquè estan
+encallats darrere dels lents.
+
+17
+00:00:59.100 --> 00:01:03.600
+En un model iteratiu, el servidor només pot
+anar tan de pressa com el seu client més lent.
+
+18
+00:01:03.780 --> 00:01:08.640
+La CPU es queda ociosa mentre espera dades de la
+xarxa i malbarata una capacitat de procés valuosa.
+
+19
+00:01:09.140 --> 00:01:13.250
+Per buidar aquesta cua, el servidor pot
+crear un procés nou per a cada connexió
+
+20
+00:01:13.300 --> 00:01:15.600
+cridant fork just després d’accept.
+
+21
+00:01:15.840 --> 00:01:17.500
+Així s’aïlla la càrrega de feina.
+
+22
+00:01:17.680 --> 00:01:21.810
+El nou procés fill atén el client, i
+el procés pare queda lliure per tornar
+
+23
+00:01:21.860 --> 00:01:24.080
+al bucle de seguida i
+acceptar la següent arribada.
+
+24
+00:01:24.380 --> 00:01:26.520
+Però això afegeix feina administrativa.
+
+25
+00:01:26.660 --> 00:01:31.010
+El servidor necessita un gestor de SIGCHLD
+per recollir els processos fills quan acaben
+
+26
+00:01:31.060 --> 00:01:33.700
+i evitar que es converteixin en
+zombis que consumeixen recursos.
+
+27
+00:01:34.320 --> 00:01:38.790
+Aïllar processos manté en marxa els
+clients ràpids, però crear un procés costa
+
+28
+00:01:38.840 --> 00:01:42.180
+diverses vegades més memòria
+del sistema que crear un fil.
+
+29
+00:01:42.520 --> 00:01:45.940
+Podem canviar el procés fill
+per un fil nou per connexió.
+
+30
+00:01:46.080 --> 00:01:49.640
+És més barat de crear i
+aprofita la memòria compartida.
+
+31
+00:01:49.920 --> 00:01:52.800
+Però aquest enfocament
+topa amb un límit físic.
+
+32
+00:01:52.940 --> 00:01:57.510
+Si un servidor rep 10 000 connexions
+simultànies, ha de mantenir 10 000 fils
+
+33
+00:01:57.560 --> 00:02:00.760
+i les seves piles de memòria, cosa
+que esgota ràpidament la màquina.
+
+34
+00:02:01.080 --> 00:02:04.380
+Un grup de fils ofereix un terme
+mitjà amb recursos acotats.
+
+35
+00:02:04.660 --> 00:02:07.580
+El servidor crea un nombre
+fix de fils en arrencar.
+
+36
+00:02:07.880 --> 00:02:11.700
+Aquests fils fan de consumidors i treuen
+les connexions actives d’una cua compartida.
+
+37
+00:02:12.020 --> 00:02:15.910
+Llancem els nostres vuit clients lents
+contra un grup acotat d’exactament vuit
+
+38
+00:02:15.960 --> 00:02:20.060
+fils. Els clients lents ocupen
+tots els fils disponibles alhora.
+
+39
+00:02:20.340 --> 00:02:24.250
+Com que triguen un segon sencer a
+acabar les peticions, el grup se satura
+
+40
+00:02:24.300 --> 00:02:28.720
+del tot. Els 24 clients
+ràpids no hi poden entrar.
+
+41
+00:02:29.180 --> 00:02:32.610
+A la sortida del model amb grup de fils
+veiem que els clients ràpids tornen a
+
+42
+00:02:32.660 --> 00:02:38.610
+quedar atrapats. La seva espera mediana es dispara
+a 981 mil·lisegons, cosa que anul·la del tot
+
+43
+00:02:38.660 --> 00:02:40.780
+l’avantatge de velocitat del multifil.
+
+44
+00:02:41.120 --> 00:02:44.730
+Els grups de fils eviten quedar-se sense
+memòria, però fallen quan el nombre
+
+45
+00:02:44.780 --> 00:02:47.320
+de clients lents iguala la mida del grup.
+
+46
+00:02:47.640 --> 00:02:51.680
+Un servidor robust necessita una arquitectura
+que no es bloqui mai per un client lent,
+
+47
+00:02:51.820 --> 00:02:54.220
+sense crear fils sense fi per compensar.
+
+48
+00:02:54.820 --> 00:02:56.760
+La solució és el bucle d’esdeveniments.
+
+49
+00:02:57.300 --> 00:03:01.110
+Un sol fil eficient atén tots els
+clients i només tracta amb els sòcols
+
+50
+00:03:01.160 --> 00:03:06.170
+que estan transmetent. Amb la crida al
+sistema epoll_wait, el fil pregunta al nucli
+
+51
+00:03:06.220 --> 00:03:09.440
+quins sòcols tenen dades
+i salta només a aquests.
+
+52
+00:03:09.660 --> 00:03:14.030
+En ignorar les connexions inactives, el
+fil no perd mai un mil·lisegon esperant que
+
+53
+00:03:14.080 --> 00:03:16.660
+un client lent acabi de
+formular la seva petició.
+
+54
+00:03:17.020 --> 00:03:20.040
+Aquest últim bloc de sortida del
+terminal demostra l’eficiència.
+
+55
+00:03:20.320 --> 00:03:25.170
+Amb exactament la mateixa càrrega, el bucle
+d’esdeveniments processa els 24 clients ràpids en només un
+
+56
+00:03:25.220 --> 00:03:28.940
+o dos mil·lisegons, sense que
+l’afectin gens els vuit clients lents.
+
+57
+00:03:29.240 --> 00:03:31.920
+El bucle d’esdeveniments
+resol el problema C10K.
+
+58
+00:03:32.120 --> 00:03:35.360
+Permet una concurrència massiva
+amb un cost mínim per al sistema.
+
+59
+00:03:35.820 --> 00:03:40.200
+Repassem. Què li passa a una connexió
+nova si un servidor iteratiu està ocupat?
+
+60
+00:03:40.380 --> 00:03:42.280
+Espera a la cua d’acceptació del sòcol.
+
+61
+00:03:42.620 --> 00:03:45.140
+Per què un grup de fils
+pateix amb els clients lents?
+
+62
+00:03:45.300 --> 00:03:50.860
+Si els clients lents igualen el nombre
+de fils, el grup se satura del tot.
+
+63
+00:03:51.340 --> 00:03:58.360
+Ara obre l’animació A8.2, models de
+servidor, a l’aula i fes el laboratori TD7.

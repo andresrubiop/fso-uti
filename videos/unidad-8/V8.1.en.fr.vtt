@@ -1,0 +1,358 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.060
+Imaginez que vous lancez un
+programme client simple.
+
+2
+00:00:06.180 --> 00:00:10.330
+Presque instantanément, il traverse
+le réseau et établit une connexion
+
+3
+00:00:10.380 --> 00:00:13.940
+réussie. Mais sur la machine
+du serveur, il y a un retard.
+
+4
+00:00:14.300 --> 00:00:18.230
+Le code du serveur est encore en initialisation
+et n’a même pas atteint la ligne
+
+5
+00:00:18.280 --> 00:00:20.260
+qui accepte les nouvelles connexions.
+
+6
+00:00:20.760 --> 00:00:26.210
+Alors, si l’application serveur n’a
+pas encore accepté la connexion, qui ou
+
+7
+00:00:26.260 --> 00:00:28.580
+quoi a répondu à l’appel ?
+
+8
+00:00:29.240 --> 00:00:34.130
+Pour résoudre ce mystère de timing, il faut voir
+comment le réseau fonctionne dans une couche
+
+9
+00:00:34.180 --> 00:00:38.720
+cachée du système, à travers un point
+de communication précis appelé socket.
+
+10
+00:00:39.240 --> 00:00:41.980
+Un socket est l’extrémité
+d’une communication.
+
+11
+00:00:42.340 --> 00:00:46.580
+Quand un programme en crée un, le système
+renvoie un descripteur de fichier.
+
+12
+00:00:46.860 --> 00:00:52.050
+On utilise ce descripteur avec des appels système
+de base comme read, write et close, exactement
+
+13
+00:00:52.100 --> 00:00:55.600
+comme avec un tube. Il existe
+plusieurs types de sockets.
+
+14
+00:00:55.840 --> 00:00:59.580
+Un protocole sans connexion comme UDP
+envoie des datagrammes indépendants.
+
+15
+00:01:00.060 --> 00:01:01.920
+C’est comme envoyer un télégramme.
+
+16
+00:01:02.140 --> 00:01:05.480
+Les données peuvent se perdre, se
+dupliquer ou arriver dans le désordre.
+
+17
+00:01:05.720 --> 00:01:07.260
+Et aucun des deux côtés
+ne reçoit d’erreur.
+
+18
+00:01:07.760 --> 00:01:11.520
+Puis il y a TCP. C’est
+un protocole connecté.
+
+19
+00:01:11.800 --> 00:01:16.350
+Une fois la connexion établie, il garantit
+un flux d’octets fiable et ordonné entre
+
+20
+00:01:16.400 --> 00:01:20.890
+les deux machines. Comme notre mystère
+implique une connexion réussie et garantie,
+
+21
+00:01:20.940 --> 00:01:23.900
+ces machines utilisent TCP.
+
+22
+00:01:24.220 --> 00:01:28.170
+Un établissement formel de connexion a eu
+lieu en coulisses, totalement indépendant de
+
+23
+00:01:28.220 --> 00:01:32.780
+l’application serveur. Regardons
+la structure du système.
+
+24
+00:01:33.080 --> 00:01:36.940
+Le processus serveur tourne en mode utilisateur,
+au-dessus de la frontière de privilèges.
+
+25
+00:01:37.120 --> 00:01:41.380
+Le cœur du système, le noyau, opère
+dans l’espace restreint en dessous.
+
+26
+00:01:41.740 --> 00:01:45.350
+Pour commencer, le processus serveur
+crée un socket et appelle bind.
+
+27
+00:01:45.400 --> 00:01:50.130
+Une requête descend alors au noyau pour
+attribuer à ce socket une adresse réseau
+
+28
+00:01:50.180 --> 00:01:54.600
+et un port local. Mais il y
+a ici un conflit matériel.
+
+29
+00:01:55.020 --> 00:02:00.470
+Un processeur x86-64 stocke les nombres en
+ordre little-endian, octets de l’arrière
+
+30
+00:02:00.520 --> 00:02:04.880
+vers l’avant. Le protocole réseau
+exige strictement l’ordre big-endian.
+
+31
+00:02:05.000 --> 00:02:10.270
+Si un programmeur oublie d’utiliser la fonction
+htons pour convertir les octets, un bogue
+
+32
+00:02:10.320 --> 00:02:17.190
+grave survient. Le processeur inverse les octets
+du port 7000, soit 1B58 en hexadécimal, et
+
+33
+00:02:17.240 --> 00:02:21.300
+le serveur se lie par
+accident au port 22555.
+
+34
+00:02:21.700 --> 00:02:26.310
+Cette conversion obligatoire montre que
+l’application dépend entièrement de la
+
+35
+00:02:26.360 --> 00:02:30.890
+pile réseau du noyau. Elle doit formater
+ses requêtes exactement selon ce
+
+36
+00:02:30.940 --> 00:02:35.950
+qu’attend le noyau. Une fois l’adresse
+liée, l’application serveur appelle
+
+37
+00:02:36.000 --> 00:02:40.630
+listen. Le socket passe en état
+passif, et le noyau surveille
+
+38
+00:02:40.680 --> 00:02:42.600
+ce port pour le trafic entrant.
+
+39
+00:02:42.900 --> 00:02:46.990
+Sur la machine distante, l’application
+cliente crée son propre socket et envoie
+
+40
+00:02:47.040 --> 00:02:49.800
+une requête connect vers
+l’adresse du serveur.
+
+41
+00:02:50.120 --> 00:02:52.460
+Revenons maintenant à
+notre mystère initial.
+
+42
+00:02:52.700 --> 00:02:56.270
+Le noyau du serveur reçoit cette
+requête sous la frontière de privilèges.
+
+43
+00:02:56.320 --> 00:02:58.840
+Il ne réveille pas encore
+l’application serveur.
+
+44
+00:02:58.940 --> 00:03:01.370
+Les deux noyaux communiquent directement.
+
+45
+00:03:01.420 --> 00:03:04.520
+Ils effectuent la poignée de
+main en trois temps de TCP.
+
+46
+00:03:04.800 --> 00:03:09.280
+SYN du client, SYN-ACK du serveur
+et un ACK final du client.
+
+47
+00:03:09.520 --> 00:03:13.390
+Ensuite, le noyau du serveur place
+la connexion établie dans une file
+
+48
+00:03:13.440 --> 00:03:17.800
+d’acceptation. Quand l’application serveur
+est enfin prête, elle appelle accept.
+
+49
+00:03:17.960 --> 00:03:20.670
+Elle n’effectue pas elle-même
+la poignée de main réseau.
+
+50
+00:03:20.720 --> 00:03:23.620
+Elle retire simplement de la
+file cette connexion en attente.
+
+51
+00:03:23.860 --> 00:03:28.110
+La fonction accept prend cette connexion
+établie et renvoie un tout nouveau descripteur
+
+52
+00:03:28.160 --> 00:03:32.810
+de fichier. Ce nouveau descripteur
+est réservé au dialogue avec ce client
+
+53
+00:03:32.860 --> 00:03:36.400
+précis, tandis que le socket d’origine
+continue d’écouter les autres.
+
+54
+00:03:36.840 --> 00:03:40.740
+Quand la communication se termine, la
+fermeture de la connexion est symétrique.
+
+55
+00:03:40.920 --> 00:03:43.580
+Elle commence dès que l’un
+des deux côtés appelle close.
+
+56
+00:03:43.960 --> 00:03:48.030
+Le système qui initie la fermeture suit
+une séquence précise et entre dans un
+
+57
+00:03:48.080 --> 00:03:49.760
+état appelé TIME_WAIT.
+
+58
+00:03:49.900 --> 00:03:54.150
+C’est une marge de sécurité pour attraper
+les paquets réseau égarés et retardés qui
+
+59
+00:03:54.200 --> 00:03:55.310
+circulent encore sur Internet.
+
+60
+00:03:55.360 --> 00:04:00.590
+Sous Linux, cette entrée TIME_WAIT
+survit dans le noyau 60 secondes
+
+61
+00:04:00.640 --> 00:04:02.550
+après la fin du programme lui-même.
+
+62
+00:04:02.600 --> 00:04:05.380
+Cela cause un problème fréquent
+pendant le développement.
+
+63
+00:04:05.620 --> 00:04:11.150
+Si vous arrêtez le serveur et le relancez
+aussitôt, il échoue avec une erreur EADDRINUSE.
+
+64
+00:04:11.200 --> 00:04:15.920
+Le port ne peut pas être lié parce
+que le noyau le retient encore.
+
+65
+00:04:16.240 --> 00:04:21.590
+Pour régler cela, le programmeur doit activer
+explicitement l’option SO_REUSEADDR avant
+
+66
+00:04:21.640 --> 00:04:25.520
+le bind. Cela prouve la
+règle générale des sockets.
+
+67
+00:04:25.840 --> 00:04:30.070
+De la première poignée de main à la fermeture
+finale, c’est le noyau qui contrôle le cycle de vie
+
+68
+00:04:30.120 --> 00:04:32.280
+du port. Pas l’application.
+
+69
+00:04:33.220 --> 00:04:37.150
+Question un. Quelle fonction renvoie un
+nouveau descripteur pour une connexion
+
+70
+00:04:37.200 --> 00:04:40.600
+établie ? C’est la fonction accept.
+
+71
+00:04:41.400 --> 00:04:45.640
+Question deux. Quelle couche termine la
+poignée de main en trois temps de TCP ?
+
+72
+00:04:45.800 --> 00:04:47.580
+L’application ou le noyau ?
+
+73
+00:04:47.980 --> 00:04:50.460
+C’est le noyau.
+
+74
+00:04:50.880 --> 00:04:56.260
+Ouvrez maintenant l’animation A8.1 dans le
+cours en ligne et faites le laboratoire TD7.

@@ -1,0 +1,346 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.300
+Imagina que demanes a un assistent d’IA que
+netegi el directori d’un projecte antic.
+
+2
+00:00:07.600 --> 00:00:09.340
+Sembla una petició senzilla.
+
+3
+00:00:09.820 --> 00:00:14.150
+Però quan aquest assistent llança una ordre
+d’esborrat sobre els teus fitxers, obliga el
+
+4
+00:00:14.200 --> 00:00:16.800
+sistema operatiu a fer-se
+una pregunta crucial.
+
+5
+00:00:17.180 --> 00:00:19.080
+Qui ho ha autoritzat realment?
+
+6
+00:00:19.660 --> 00:00:23.400
+Per al sistema operatiu, un agent
+d’IA és només un altre procés.
+
+7
+00:00:23.680 --> 00:00:27.990
+Executa un model de llenguatge que proposa
+una crida a eina concreta, en forma de nom
+
+8
+00:00:28.040 --> 00:00:32.570
+i arguments, i depèn d’un programa
+associat que l’executa de debò.
+
+9
+00:00:32.620 --> 00:00:35.040
+Això crea una bretxa de
+seguretat perillosa.
+
+10
+00:00:35.480 --> 00:00:40.020
+L’agent executa ordres en nom de
+l’usuari, però no és l’usuari humà.
+
+11
+00:00:40.360 --> 00:00:43.720
+Les seves decisions surten d’un
+model estadístic que prediu text.
+
+12
+00:00:44.020 --> 00:00:48.230
+Aquest model es pot equivocar i al·lucinar,
+o pot ser manipulat activament per
+
+13
+00:00:48.280 --> 00:00:52.760
+instruccions ocultes en un document que llegeix,
+un atac anomenat injecció d’instruccions.
+
+14
+00:00:53.220 --> 00:00:57.390
+Com que les decisions de l’agent no són fiables
+per naturalesa, mantenir segures les seves accions
+
+15
+00:00:57.440 --> 00:01:00.280
+és estrictament un problema de
+seguretat del sistema operatiu.
+
+16
+00:01:00.560 --> 00:01:04.360
+Per al nucli, aquest agent és una enorme
+càrrega de feina per al maquinari.
+
+17
+00:01:04.720 --> 00:01:09.610
+El sistema envia els càlculs d’inferència a
+les GPU i NPU mitjançant el subsistema accel
+
+18
+00:01:09.660 --> 00:01:14.730
+de Linux. Abans que el model pugui avaluar
+la petició de l’usuari, el sistema ha de
+
+19
+00:01:14.780 --> 00:01:17.520
+carregar en memòria els seus
+enormes pesos, de només lectura.
+
+20
+00:01:18.160 --> 00:01:21.000
+Linux ho resol amb elegància
+amb la crida al sistema mmap.
+
+21
+00:01:21.160 --> 00:01:24.570
+Llegeix els pesos directament de la memòria
+cau de pàgines en el moment que es toquen,
+
+22
+00:01:24.620 --> 00:01:27.320
+sense haver de copiar-los a la memòria.
+
+23
+00:01:27.800 --> 00:01:32.980
+Mentre el model processa la conversa, desa
+claus i valors en una memòria cau KV.
+
+24
+00:01:33.360 --> 00:01:37.390
+Aquesta memòria creix sense parar amb
+la llargada de la conversa, perquè el
+
+25
+00:01:37.440 --> 00:01:39.920
+sistema no hagi de recalcular
+els tokens anteriors.
+
+26
+00:01:40.440 --> 00:01:44.760
+Després dels càlculs, el model enllesteix
+la seva proposta d’esborrar la carpeta.
+
+27
+00:01:45.100 --> 00:01:47.980
+Ara el sistema operatiu ha
+d’intervenir per interceptar-la.
+
+28
+00:01:48.380 --> 00:01:52.440
+L’arquitectura d’un sistema operatiu
+nadiu d’IA es basa en una regla absoluta.
+
+29
+00:01:52.600 --> 00:01:55.820
+El model proposa, però el
+sistema operatiu disposa.
+
+30
+00:01:56.140 --> 00:02:00.410
+Per fer complir aquesta regla, el nucli
+ha de tractar tot el que genera el model
+
+31
+00:02:00.460 --> 00:02:03.300
+estrictament com a text extern no fiable.
+
+32
+00:02:03.880 --> 00:02:07.540
+Windows ho resol posant l’agent en un
+espai de treball dedicat per a agents.
+
+33
+00:02:07.900 --> 00:02:11.870
+L’agent treballa en paral·lel amb l’usuari
+humà, limitat al seu propi compte
+
+34
+00:02:11.920 --> 00:02:16.540
+separat. Els contenidors d’execució de
+Microsoft aïllen els processos de l’agent.
+
+35
+00:02:16.940 --> 00:02:20.870
+Quan l’agent necessita el sistema de
+fitxers, envia les peticions per connectors
+
+36
+00:02:20.920 --> 00:02:24.900
+del protocol de context de models,
+limitats al mínim privilegi possible.
+
+37
+00:02:24.960 --> 00:02:29.880
+Tota la filosofia de Windows es basa a
+mantenir una separació física i lògica,
+
+38
+00:02:30.120 --> 00:02:34.940
+confinant l’agent en espais paral·lels regits
+per polítiques declaratives estrictes.
+
+39
+00:02:35.420 --> 00:02:40.080
+A Linux x86-64 no hi ha un
+agent únic per a tot el sistema.
+
+40
+00:02:40.280 --> 00:02:44.970
+En canvi, distribucions com Ubuntu combinen
+primitives fines del nucli per construir un
+
+41
+00:02:45.020 --> 00:02:49.630
+entorn confinat. El procés de l’agent
+corre en mode usuari, sobre la frontera
+
+42
+00:02:49.680 --> 00:02:54.350
+de privilegis del nucli. Primer, els espais de
+noms aïllen la visió de l’agent i limiten el que
+
+43
+00:02:54.400 --> 00:02:59.680
+veu dels muntatges i dels usuaris. Després, els
+cgroups posen sostre al consum de CPU i memòria.
+
+44
+00:02:59.880 --> 00:03:04.300
+Finalment, els filtres seccomp impedeixen que creuin
+la frontera les crides al sistema no aprovades.
+
+45
+00:03:04.500 --> 00:03:08.430
+Abans que l’agent pugui ni tan sols intentar
+executar la seva crida a eina, Linux ja
+
+46
+00:03:08.480 --> 00:03:12.840
+ha retallat dràsticament el seu entorn, els seus
+recursos de maquinari i el seu accés al nucli.
+
+47
+00:03:13.300 --> 00:03:16.850
+Amb l’entorn blindat, l’agent envia la
+seva petició pendent d’esborrar la carpeta
+
+48
+00:03:16.900 --> 00:03:20.920
+per un sòcol Unix a un dimoni
+en segon pla com agentd.
+
+49
+00:03:21.180 --> 00:03:24.720
+El dimoni aplica la primera capa de
+defensa: un analitzador estricte.
+
+50
+00:03:24.860 --> 00:03:29.050
+Si la petició no coincideix exactament amb un
+catàleg tancat de crides a eines autoritzades,
+
+51
+00:03:29.100 --> 00:03:33.420
+es rebutja a l’instant. La segona capa
+és una política estricta de camins.
+
+52
+00:03:33.780 --> 00:03:37.950
+El dimoni limita tots els camins a l’espai
+de treball intern, resol els enllaços
+
+53
+00:03:38.000 --> 00:03:41.380
+simbòlics i prohibeix les fugides
+relatives, com els dos punts.
+
+54
+00:03:41.760 --> 00:03:46.070
+Com que esborrar fitxers és una acció
+destructiva, el dimoni activa la tercera capa
+
+55
+00:03:46.120 --> 00:03:49.320
+i pausa l’execució per exigir el
+consentiment explícit de l’usuari.
+
+56
+00:03:49.660 --> 00:03:53.970
+En aquesta sortida del terminal veus
+el model emetre una crida a eina,
+
+57
+00:03:54.020 --> 00:03:58.220
+la política interna permetre-la i l’entorn
+aïllat a punt per fer-la complir.
+
+58
+00:03:58.280 --> 00:04:03.070
+Encara que aquesta política interna falli, un
+entorn aïllat del nucli amb Landlock actua com a
+
+59
+00:04:03.120 --> 00:04:07.600
+quarta capa i aixeca un mur impenetrable
+just a la frontera de privilegis.
+
+60
+00:04:08.020 --> 00:04:10.740
+Finalment, la cinquena capa
+s’encarrega de l’auditoria.
+
+61
+00:04:10.840 --> 00:04:16.570
+Cada decisió es registra a audit.log, amb
+l’opció de sòcol SO_PEERCRED per obtenir
+
+62
+00:04:16.620 --> 00:04:20.000
+l’UID i el PID reals del
+client directament del nucli.
+
+63
+00:04:20.080 --> 00:04:24.300
+Tot aquest cicle de vida il·lustra el
+principi de defensa en profunditat.
+
+64
+00:04:24.480 --> 00:04:28.180
+Cap capa de seguretat no confia
+que l’anterior hagi funcionat bé.
+
+65
+00:04:28.460 --> 00:04:30.000
+Acabem amb un repàs ràpid.
+
+66
+00:04:30.420 --> 00:04:34.050
+Pregunta u: què és un agent
+d’IA per al sistema operatiu?
+
+67
+00:04:34.100 --> 00:04:38.770
+Resposta: és un model de llenguatge que
+proposa crides a eines més un programa que les
+
+68
+00:04:38.820 --> 00:04:44.290
+executa. Pregunta dos: quina crida al sistema carrega
+els enormes pesos de només lectura del model sense
+
+69
+00:04:44.340 --> 00:04:47.680
+copiar-los? Resposta: la
+crida al sistema mmap.
+
+70
+00:04:47.800 --> 00:04:54.680
+Ara obre les animacions A9.1 i A9.3
+a l’aula i fes el laboratori TD8.

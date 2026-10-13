@@ -1,0 +1,347 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.320
+Imagina dos ordinadors idèntics copiant
+el mateix fitxer de 8 megabytes.
+
+2
+00:00:08.600 --> 00:00:14.000
+Un acaba a l’instant. L’altre
+s’arrossega i triga uns quants segons.
+
+3
+00:00:14.460 --> 00:00:19.310
+Parlem de menys d’un mil·lisegon
+contra segons d’espera
+
+4
+00:00:19.360 --> 00:00:23.660
+desesperant. Els dos programes fan
+servir exactament la mateixa lògica.
+
+5
+00:00:23.780 --> 00:00:28.010
+L’únic que canvia és la mida de la
+memòria intermèdia on guarden les
+
+6
+00:00:28.060 --> 00:00:33.410
+dades. Com pot la mida d’una memòria
+intermèdia decidir la velocitat d’una simple
+
+7
+00:00:33.460 --> 00:00:38.590
+tasca d’entrada i sortida? Per saber-ho,
+cal mirar de prop com es comunica
+
+8
+00:00:38.640 --> 00:00:41.240
+un procés amb el sistema operatiu.
+
+9
+00:00:41.700 --> 00:00:46.670
+Tot procés neix amb tres descriptors
+oberts: el 0 per a l’entrada estàndard, l’1
+
+10
+00:00:46.720 --> 00:00:49.740
+per a la sortida estàndard i
+el 2 per a l’error estàndard.
+
+11
+00:00:50.180 --> 00:00:53.830
+El programa no sap què
+representen aquests números.
+
+12
+00:00:53.880 --> 00:00:57.160
+Només els fa servir per
+demanar o enviar dades.
+
+13
+00:00:57.400 --> 00:01:01.790
+És el shell qui els dona
+sentit, amb operadors com menor
+
+14
+00:01:01.840 --> 00:01:06.260
+que o major que. El shell els associa a
+un fitxer, un terminal o una canonada.
+
+15
+00:01:06.780 --> 00:01:11.200
+Aquesta taula, sortida de l’eina de
+mesura del curs, mostra el cost real.
+
+16
+00:01:11.740 --> 00:01:17.530
+La fila amb una memòria intermèdia de 64
+kilobytes acaba en 129 crides, mentre que la
+
+17
+00:01:17.580 --> 00:01:22.100
+d’un byte obliga a més de vuit
+milions de crides al sistema.
+
+18
+00:01:22.420 --> 00:01:25.840
+El disc és exactament el
+mateix en les dues proves.
+
+19
+00:01:26.140 --> 00:01:30.350
+Com que el descriptor abstreu del
+tot la destinació, no és el maquinari
+
+20
+00:01:30.400 --> 00:01:34.650
+el que ens frena. L’enorme retard el
+causa directament la quantitat de
+
+21
+00:01:34.700 --> 00:01:38.120
+crides al sistema. Pensa en la crida read.
+
+22
+00:01:38.360 --> 00:01:42.450
+El programa demana dades al nucli, i la
+crida retorna el nombre exacte de bytes
+
+23
+00:01:42.500 --> 00:01:44.120
+que ha pogut llegir.
+
+24
+00:01:44.300 --> 00:01:48.390
+Les regles són estrictes. Si la crida arriba
+al final del fitxer, retorna exactament
+
+25
+00:01:48.440 --> 00:01:51.940
+zero. Si hi ha un error, retorna menys u.
+
+26
+00:01:52.240 --> 00:01:55.200
+Però en programació de sistemes
+hi ha una advertència important.
+
+27
+00:01:55.420 --> 00:01:59.700
+Una crida read pot retornar menys bytes
+dels que ha demanat el teu programa.
+
+28
+00:01:59.980 --> 00:02:01.820
+Aquesta lectura parcial passa sovint.
+
+29
+00:02:02.260 --> 00:02:06.410
+El programa pot estar llegint d’un
+sòcol de xarxa o d’una canonada, o el
+
+30
+00:02:06.460 --> 00:02:08.740
+procés pot ser interromput per un senyal.
+
+31
+00:02:09.160 --> 00:02:13.310
+Com que no se sap quantes dades
+arribaran, mai no t’has de refiar que
+
+32
+00:02:13.360 --> 00:02:15.920
+una sola crida read
+porti un fitxer sencer.
+
+33
+00:02:16.260 --> 00:02:19.760
+La crida write té exactament
+la mateixa limitació.
+
+34
+00:02:19.960 --> 00:02:22.300
+També es pot quedar a mitges.
+
+35
+00:02:22.660 --> 00:02:26.550
+Una escriptura es pot tallar si la canonada
+o el sòcol de destinació són plens,
+
+36
+00:02:26.600 --> 00:02:30.060
+o si un senyal interromp el procés
+abans que surtin les dades.
+
+37
+00:02:30.620 --> 00:02:33.460
+Aquest codi mostra la
+contramesura obligatòria en C.
+
+38
+00:02:33.620 --> 00:02:37.680
+Un bucle while crida write una vegada i una
+altra fins a enviar tots els bytes demanats.
+
+39
+00:02:37.960 --> 00:02:42.390
+El laboratori ho exigeix: posa read dins d’un
+bucle infinit per tornar-ho a provar i construeix
+
+40
+00:02:42.440 --> 00:02:46.060
+embolcalls robustos com
+read_exact i write_all.
+
+41
+00:02:46.680 --> 00:02:50.810
+Garantir una entrada i sortida robustes
+obliga els programes a repetir en bucle.
+
+42
+00:02:50.860 --> 00:02:54.500
+I aquest bucle multiplica directament
+el nombre de crides al sistema.
+
+43
+00:02:54.800 --> 00:02:59.190
+Cada vegada que el teu programa crida read
+o write, la CPU ha d’aturar l’execució
+
+44
+00:02:59.240 --> 00:03:03.600
+en mode usuari. Després salta la frontera
+de privilegis fins al mode nucli.
+
+45
+00:03:03.960 --> 00:03:06.700
+Aquest viatge d’anada i tornada
+obligatori és un canvi de context.
+
+46
+00:03:06.980 --> 00:03:10.470
+Desar els registres i validar
+els arguments té un cost de temps
+
+47
+00:03:10.520 --> 00:03:14.320
+inevitable. A la màquina del
+curs hem mesurat aquest peatge.
+
+48
+00:03:14.500 --> 00:03:19.340
+Costa uns 0,7 microsegons per
+cada volta de read i write.
+
+49
+00:03:19.540 --> 00:03:24.390
+El sistema operatiu cobra el mateix peatge
+de 0,7 microsegons tant si la crida
+
+50
+00:03:24.440 --> 00:03:27.500
+porta moltíssimes dades
+com si porta un sol byte.
+
+51
+00:03:27.800 --> 00:03:31.070
+El veritable coll d’ampolla mai no és
+la quantitat de dades que es mouen.
+
+52
+00:03:31.120 --> 00:03:34.520
+És la quantitat de passos de
+frontera que calen per moure-les.
+
+53
+00:03:34.780 --> 00:03:38.550
+Tornem al misteri del principi, els vuit
+megabytes, i apliquem aquest càlcul
+
+54
+00:03:38.600 --> 00:03:40.280
+al cas de la memòria intermèdia d’un byte.
+
+55
+00:03:40.620 --> 00:03:44.910
+Moure vuit megabytes byte a byte obliga
+el programa a creuar la frontera
+
+56
+00:03:44.960 --> 00:03:49.720
+8,4 milions de vegades. Per
+això triga uns quants segons.
+
+57
+00:03:50.300 --> 00:03:52.730
+Compara-ho amb la memòria
+intermèdia de 64 kilobytes.
+
+58
+00:03:52.780 --> 00:03:59.530
+Porta els mateixos vuit megabytes
+de dades, però només necessita 129
+
+59
+00:03:59.580 --> 00:04:05.670
+voltes. Com que el programa paga el peatge
+del canvi de context només 129 vegades, el
+
+60
+00:04:05.720 --> 00:04:09.180
+temps total baixa a
+menys d’un mil·lisegon.
+
+61
+00:04:09.660 --> 00:04:13.120
+D’aquí surt la regla d’or de
+l’arquitectura de sistemes.
+
+62
+00:04:13.340 --> 00:04:16.320
+No treballis mai byte
+a byte dins d’un bucle.
+
+63
+00:04:16.540 --> 00:04:20.770
+Agrupa sempre les dades en memòries intermèdies
+d’uns quants kilobytes o més per reduir
+
+64
+00:04:20.820 --> 00:04:24.280
+els viatges al nucli. No
+sempre ho has de fer a mà.
+
+65
+00:04:24.820 --> 00:04:28.630
+La biblioteca estàndard de C aplica
+aquesta regla automàticament
+
+66
+00:04:28.680 --> 00:04:31.740
+quan fas servir funcions
+com printf o fwrite.
+
+67
+00:04:32.520 --> 00:04:38.430
+Repassem. Pregunta u: què
+retorna read quan arriba al final
+
+68
+00:04:38.480 --> 00:04:41.140
+d’un fitxer? Retorna zero.
+
+69
+00:04:42.060 --> 00:04:46.780
+Pregunta dos: per què copiar un
+fitxer byte a byte triga tant?
+
+70
+00:04:47.080 --> 00:04:51.920
+Perquè cada crida al sistema paga un peatge fix
+de temps per creuar la frontera de privilegis.
+
+71
+00:04:52.580 --> 00:04:59.360
+Ara obre les animacions A2.3 i A2.4
+a l’aula i fes el laboratori TD1.

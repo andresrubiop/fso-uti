@@ -1,0 +1,307 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.550
+Un serveur réseau doit sans
+cesse trouver l’équilibre.
+
+2
+00:00:06.600 --> 00:00:10.930
+Il doit traiter les données de
+centaines de connexions à la fois sans
+
+3
+00:00:10.980 --> 00:00:14.080
+laisser un client lent
+engorger tout le système.
+
+4
+00:00:14.500 --> 00:00:17.040
+On peut mesurer ce problème
+dans le laboratoire TD7.
+
+5
+00:00:17.380 --> 00:00:20.480
+On envoie 32 clients à la
+fois vers un serveur web.
+
+6
+00:00:21.000 --> 00:00:25.430
+24 envoient leurs requêtes instantanément,
+mais huit sont volontairement lents
+
+7
+00:00:25.480 --> 00:00:27.980
+et mettent une seconde entière
+à transmettre leurs données.
+
+8
+00:00:28.420 --> 00:00:30.760
+On commence par un modèle
+de serveur itératif.
+
+9
+00:00:30.840 --> 00:00:35.920
+Il tourne sur un seul thread et traite
+exactement une connexion à la fois.
+
+10
+00:00:36.160 --> 00:00:39.990
+Pendant que le serveur s’occupe du premier
+client, les 31 autres connexions terminent
+
+11
+00:00:40.040 --> 00:00:41.340
+leur poignée de main en trois temps.
+
+12
+00:00:41.620 --> 00:00:45.510
+Le noyau marque leur connexion comme
+établie, mais elles restent coincées dans
+
+13
+00:00:45.560 --> 00:00:47.620
+la file d’acceptation du socket d’écoute.
+
+14
+00:00:48.000 --> 00:00:50.780
+Cette sortie du terminal
+montre l’effet de ce retard.
+
+15
+00:00:51.040 --> 00:00:56.450
+Nos clients rapides attendent en médiane 982
+millisecondes rien que pour obtenir une réponse,
+
+16
+00:00:56.500 --> 00:00:58.900
+simplement parce qu’ils sont
+coincés derrière les lents.
+
+17
+00:00:59.100 --> 00:01:03.600
+Dans un modèle itératif, le serveur ne va
+pas plus vite que son client le plus lent.
+
+18
+00:01:03.780 --> 00:01:08.640
+Le CPU reste inactif en attendant les données du
+réseau et gaspille une précieuse puissance de calcul.
+
+19
+00:01:09.140 --> 00:01:13.250
+Pour vider cette file, le serveur peut créer
+un nouveau processus pour chaque connexion
+
+20
+00:01:13.300 --> 00:01:15.600
+en appelant fork juste après accept.
+
+21
+00:01:15.840 --> 00:01:17.500
+Cela isole la charge de travail.
+
+22
+00:01:17.680 --> 00:01:21.810
+Le nouveau processus enfant sert le client,
+ce qui libère le parent pour reboucler
+
+23
+00:01:21.860 --> 00:01:24.080
+aussitôt et accepter l’arrivée suivante.
+
+24
+00:01:24.380 --> 00:01:26.520
+Mais cela crée une charge administrative.
+
+25
+00:01:26.660 --> 00:01:31.010
+Le serveur a besoin d’un gestionnaire de
+SIGCHLD pour récupérer les enfants terminés
+
+26
+00:01:31.060 --> 00:01:33.700
+et éviter qu’ils deviennent des
+zombies qui consomment des ressources.
+
+27
+00:01:34.320 --> 00:01:38.790
+Isoler les processus fait avancer les clients
+rapides, mais créer un processus coûte
+
+28
+00:01:38.840 --> 00:01:42.180
+plusieurs fois plus de
+mémoire que créer un thread.
+
+29
+00:01:42.520 --> 00:01:45.940
+On peut remplacer le processus enfant
+par un nouveau thread par connexion.
+
+30
+00:01:46.080 --> 00:01:49.640
+C’est moins coûteux à créer et cela
+profite de la mémoire partagée.
+
+31
+00:01:49.920 --> 00:01:52.800
+Mais cette approche se heurte
+à une limite physique.
+
+32
+00:01:52.940 --> 00:01:57.510
+Si un serveur reçoit 10 000 connexions
+simultanées, il doit maintenir 10 000 threads
+
+33
+00:01:57.560 --> 00:02:00.760
+et leurs piles mémoire, ce
+qui épuise vite la machine.
+
+34
+00:02:01.080 --> 00:02:04.380
+Un pool de threads offre un compromis
+avec des ressources bornées.
+
+35
+00:02:04.660 --> 00:02:07.580
+Le serveur crée un nombre
+fixe de threads au démarrage.
+
+36
+00:02:07.880 --> 00:02:11.700
+Ces threads jouent le rôle de consommateurs et
+retirent les connexions actives d’une file partagée.
+
+37
+00:02:12.020 --> 00:02:15.910
+Envoyons nos huit clients lents vers
+un pool borné d’exactement huit
+
+38
+00:02:15.960 --> 00:02:20.060
+threads. Les clients lents prennent
+tous les threads disponibles d’un coup.
+
+39
+00:02:20.340 --> 00:02:24.250
+Comme ils mettent une seconde entière à
+finir leurs requêtes, le pool est totalement
+
+40
+00:02:24.300 --> 00:02:28.720
+saturé. Les 24 clients rapides
+ne peuvent pas entrer du tout.
+
+41
+00:02:29.180 --> 00:02:32.610
+Dans la sortie du modèle à pool, on voit
+que les clients rapides sont de nouveau
+
+42
+00:02:32.660 --> 00:02:38.610
+coincés. Leur attente médiane grimpe à 981
+millisecondes, ce qui annule complètement
+
+43
+00:02:38.660 --> 00:02:40.780
+l’avantage de vitesse du multithread.
+
+44
+00:02:41.120 --> 00:02:44.730
+Les pools de threads évitent de manquer
+de mémoire, mais échouent quand le nombre
+
+45
+00:02:44.780 --> 00:02:47.320
+de clients lents égale la taille du pool.
+
+46
+00:02:47.640 --> 00:02:51.680
+Un serveur robuste a besoin d’une architecture
+qui ne bloque jamais sur un client lent,
+
+47
+00:02:51.820 --> 00:02:54.220
+sans créer des threads à
+l’infini pour compenser.
+
+48
+00:02:54.820 --> 00:02:56.760
+La solution est la boucle d’événements.
+
+49
+00:02:57.300 --> 00:03:01.110
+Un seul thread efficace sert tous les
+clients en ne traitant que les sockets
+
+50
+00:03:01.160 --> 00:03:06.170
+qui transmettent. Avec l’appel système
+epoll_wait, le thread demande au noyau
+
+51
+00:03:06.220 --> 00:03:09.440
+quels sockets ont des données
+et ne saute que vers ceux-là.
+
+52
+00:03:09.660 --> 00:03:14.030
+En ignorant les connexions inactives, le thread
+ne perd jamais une milliseconde à attendre
+
+53
+00:03:14.080 --> 00:03:16.660
+qu’un client lent finisse
+de formuler sa requête.
+
+54
+00:03:17.020 --> 00:03:20.040
+Ce dernier bloc de sortie du
+terminal prouve l’efficacité.
+
+55
+00:03:20.320 --> 00:03:25.170
+Sous exactement la même charge, la boucle
+d’événements traite les 24 clients rapides en une
+
+56
+00:03:25.220 --> 00:03:28.940
+à deux millisecondes seulement, sans être
+affectée par les huit clients lents.
+
+57
+00:03:29.240 --> 00:03:31.920
+La boucle d’événements
+résout le problème C10K.
+
+58
+00:03:32.120 --> 00:03:35.360
+Elle permet une concurrence massive
+avec un coût minimal pour le système.
+
+59
+00:03:35.820 --> 00:03:40.200
+Récapitulons. Que devient une nouvelle
+connexion si un serveur itératif est occupé ?
+
+60
+00:03:40.380 --> 00:03:42.280
+Elle attend dans la file
+d’acceptation du socket.
+
+61
+00:03:42.620 --> 00:03:45.140
+Pourquoi un pool de threads
+souffre-t-il avec les clients lents ?
+
+62
+00:03:45.300 --> 00:03:50.860
+Si les clients lents égalent le nombre
+de threads, le pool sature complètement.
+
+63
+00:03:51.340 --> 00:03:58.360
+Ouvrez maintenant l’animation A8.2, modèles de serveur,
+dans le cours en ligne et faites le laboratoire TD7.

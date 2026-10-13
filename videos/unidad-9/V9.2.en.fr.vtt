@@ -1,0 +1,301 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.960
+Un agent d’IA n’est qu’un processus système
+de plus, mais avec une mission particulière.
+
+2
+00:00:08.020 --> 00:00:10.100
+Il agit en votre nom.
+
+3
+00:00:10.840 --> 00:00:13.470
+Dans cette unité, nous
+utilisons un micro-LLM.
+
+4
+00:00:13.520 --> 00:00:19.450
+Il a exactement 175 000 paramètres, et sa seule
+tâche est de traduire une demande en anglais ou
+
+5
+00:00:19.500 --> 00:00:22.460
+en espagnol en un appel d’outil précis.
+
+6
+00:00:22.740 --> 00:00:27.010
+Mais un modèle de langage est un moteur
+statistique, pas un programme déterministe.
+
+7
+00:00:27.060 --> 00:00:32.590
+Il peut facilement halluciner une commande ou
+être manipulé par une instruction cachée dans un
+
+8
+00:00:32.640 --> 00:00:36.220
+document qu’il lit : c’est
+l’injection de prompt.
+
+9
+00:00:36.660 --> 00:00:41.390
+Comme sa sortie n’est que du texte non fiable, le
+système d’exploitation ne peut pas supposer que
+
+10
+00:00:41.440 --> 00:00:42.980
+les décisions de l’agent sont sûres.
+
+11
+00:00:43.320 --> 00:00:47.520
+Pour le vérifier, nous allons faire un
+test d’intrusion sur notre propre système.
+
+12
+00:00:47.740 --> 00:00:50.930
+On commence par donner à l’agent une
+demande volontairement malveillante.
+
+13
+00:00:50.980 --> 00:00:57.380
+On lui demande de lire le fichier de mots
+de passe, très sensible, /etc/passwd.
+
+14
+00:00:57.740 --> 00:00:59.720
+Le modèle fait parfaitement son travail.
+
+15
+00:00:59.940 --> 00:01:04.320
+Il traduit l’intention malveillante et
+génère exactement l’appel d’outil demandé,
+
+16
+00:01:04.380 --> 00:01:05.880
+qui vise ce fichier protégé.
+
+17
+00:01:06.140 --> 00:01:10.440
+Même si l’utilisateur a lancé l’agent,
+celui-ci est une entité indépendante.
+
+18
+00:01:10.760 --> 00:01:14.900
+Le système ne lui accorde pas automatiquement
+toute la confiance de l’utilisateur.
+
+19
+00:01:15.260 --> 00:01:17.940
+Cela nous amène à la règle
+centrale de notre architecture.
+
+20
+00:01:18.120 --> 00:01:23.550
+Le modèle d’IA propose une action, mais le
+système d’exploitation dispose et décide si cette
+
+21
+00:01:23.600 --> 00:01:25.500
+action peut vraiment s’exécuter.
+
+22
+00:01:25.920 --> 00:01:31.190
+Ce texte non fiable passe par un socket
+Unix en permissions 0600 jusqu’au
+
+23
+00:01:31.240 --> 00:01:35.830
+démon agentd. Ce gestionnaire central utilise
+un pool de threads pour traiter les requêtes
+
+24
+00:01:35.880 --> 00:01:40.980
+concurrentes. Au lieu d’interroger l’agent,
+agentd interroge directement le noyau.
+
+25
+00:01:41.360 --> 00:01:45.380
+Avec SO_PEERCRED, il obtient
+l’UID et le PID du client.
+
+26
+00:01:45.620 --> 00:01:50.280
+Chaque décision et chaque action sont ensuite
+consignées pour toujours dans un journal d’audit.
+
+27
+00:01:50.740 --> 00:01:54.930
+Avant même d’envisager une action, le
+système exige que le noyau vérifie
+
+28
+00:01:54.980 --> 00:01:57.940
+l’identité de l’appelant, en
+laissant une trace permanente.
+
+29
+00:01:58.820 --> 00:02:01.700
+Normalement, la requête passe
+ensuite par une couche de politiques.
+
+30
+00:02:01.840 --> 00:02:06.210
+Le démon analyse le texte, le compare
+à un catalogue fermé d’outils et oblige
+
+31
+00:02:06.260 --> 00:02:09.440
+tous les chemins à rester dans
+l’espace de travail de l’agent.
+
+32
+00:02:09.560 --> 00:02:14.410
+Si l’action est destructrice, la politique
+suspend tout pour demander à l’utilisateur son
+
+33
+00:02:14.460 --> 00:02:19.970
+consentement explicite. Mais pour tester
+la vraie résistance de notre système,
+
+34
+00:02:20.020 --> 00:02:23.340
+nous allons désactiver volontairement
+ce moteur de politiques.
+
+35
+00:02:23.640 --> 00:02:28.130
+Le gardien applicatif éteint, notre
+demande malveillante de lire le
+
+36
+00:02:28.180 --> 00:02:32.200
+fichier de mots de passe passe sans encombre
+et avance librement vers l’exécution.
+
+37
+00:02:32.720 --> 00:02:37.090
+Retirer ce filet de sécurité montre pourquoi
+dépendre d’une seule couche de sécurité
+
+38
+00:02:37.140 --> 00:02:40.020
+applicative rend un
+système très vulnérable.
+
+39
+00:02:40.540 --> 00:02:44.140
+La requête atteint le programme
+exécutant, agent_exec.
+
+40
+00:02:44.400 --> 00:02:49.490
+Il se prépare à lancer l’outil en créant un
+nouveau processus avec les appels système fork et
+
+41
+00:02:49.540 --> 00:02:54.530
+execve. Il applique aussitôt des limites
+strictes de mémoire et de descripteurs avec
+
+42
+00:02:54.580 --> 00:03:00.160
+setrlimit, et règle une alarme pour que le
+code non fiable ne tourne pas indéfiniment.
+
+43
+00:03:00.780 --> 00:03:05.690
+Ce processus très restreint est maintenant
+isolé, préparé et prêt à exécuter
+
+44
+00:03:05.740 --> 00:03:07.320
+l’attaque contre le fichier système.
+
+45
+00:03:07.760 --> 00:03:11.450
+Ces limites de ressources empêchent la machine
+de planter, mais elles ne font absolument
+
+46
+00:03:11.500 --> 00:03:15.620
+rien pour empêcher le processus d’ouvrir
+et de lire des données protégées.
+
+47
+00:03:15.840 --> 00:03:17.620
+Le moment de vérité arrive.
+
+48
+00:03:17.860 --> 00:03:22.530
+Le processus voyou isolé tente enfin d’exécuter
+la commande pour ouvrir /etc/passwd.
+
+49
+00:03:22.580 --> 00:03:28.290
+Pour cela, le processus, qui vit en haut,
+en mode utilisateur, doit franchir la
+
+50
+00:03:28.340 --> 00:03:31.780
+frontière de privilèges vers le mode
+noyau pour accéder à un fichier.
+
+51
+00:03:32.120 --> 00:03:34.900
+Là, le noyau intervient de façon décisive.
+
+52
+00:03:35.300 --> 00:03:40.330
+Comme agent_exec a appliqué auparavant un
+bac à sable Landlock, le noyau refuse net
+
+53
+00:03:40.380 --> 00:03:44.300
+la demande d’accès. C’est la
+caractéristique qui définit Landlock.
+
+54
+00:03:44.600 --> 00:03:49.010
+Une fois qu’un processus s’est restreint, ce bac
+à sable est hérité pour toujours et ne peut pas
+
+55
+00:03:49.060 --> 00:03:51.860
+être annulé, même si la politique
+de l’application échoue.
+
+56
+00:03:52.440 --> 00:03:56.660
+La vraie défense en profondeur consiste à supposer
+que chaque couche applicative finira par céder.
+
+57
+00:03:56.740 --> 00:04:01.600
+Ce jour-là, le bac à sable du noyau reste
+l’autorité ultime, impossible à contourner.
+
+58
+00:04:01.980 --> 00:04:07.310
+Récapitulons. D’abord, quelle option de
+socket donne au démon l’identité exacte
+
+59
+00:04:07.360 --> 00:04:10.600
+du client ? C’est SO_PEERCRED.
+
+60
+00:04:10.920 --> 00:04:15.920
+Ensuite, quelle primitive Linux sert de bac
+à sable final du noyau pour arrêter l’agent ?
+
+61
+00:04:16.160 --> 00:04:22.890
+C’est Landlock. Ouvrez maintenant les
+animations A9.2 et A9.4 dans le cours en ligne
+
+62
+00:04:22.940 --> 00:04:26.740
+et faites le laboratoire
+TD8 avec son défi d’IA.

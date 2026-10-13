@@ -1,0 +1,303 @@
+WEBVTT
+
+1
+00:00:03.020 --> 00:00:08.250
+Dans un programme C typique, un processus
+parent peut devoir envoyer un flux continu de
+
+2
+00:00:08.300 --> 00:00:13.950
+données à un processus enfant. Mais parfois,
+au lieu de finir la tâche, le flux de données
+
+3
+00:00:14.000 --> 00:00:18.830
+s’arrête net. Le programme se fige
+complètement et le terminal ne
+
+4
+00:00:18.880 --> 00:00:21.560
+répond plus. C’est un interblocage.
+
+5
+00:00:21.760 --> 00:00:26.310
+Il se produit quand un programme qui devrait terminer
+son exécution finit par attendre indéfiniment
+
+6
+00:00:26.360 --> 00:00:28.030
+un événement qui n’arrivera jamais.
+
+7
+00:00:28.080 --> 00:00:32.820
+Si on regarde la sortie du terminal, on
+voit que le système a fini par intervenir
+
+8
+00:00:32.960 --> 00:00:36.860
+et tuer le programme bloqué après un
+délai, avec l’état de sortie 124.
+
+9
+00:00:37.480 --> 00:00:42.490
+Alors, pourquoi un flux d’octets parfaitement
+valide entre deux processus apparentés aboutit-il
+
+10
+00:00:42.540 --> 00:00:44.380
+à un blocage permanent ?
+
+11
+00:00:44.620 --> 00:00:48.400
+Pour diagnostiquer ce blocage, il faut
+regarder sous la frontière de privilèges.
+
+12
+00:00:48.480 --> 00:00:52.250
+Cette frontière sépare nos programmes, qui
+tournent en mode utilisateur, du noyau du
+
+13
+00:00:52.300 --> 00:00:57.550
+système. Quand un programme utilise
+l’appel système pipe, il crée un tampon
+
+14
+00:00:57.600 --> 00:01:02.530
+circulaire dans le noyau. Ce tampon agit comme un
+flux continu d’octets, qui déplace les données
+
+15
+00:01:02.580 --> 00:01:05.240
+strictement dans l’ordre, sans
+frontières entre messages.
+
+16
+00:01:05.380 --> 00:01:10.240
+Le noyau rend alors exactement deux descripteurs
+de fichiers au processus en mode utilisateur.
+
+17
+00:01:10.300 --> 00:01:14.460
+L’un sert uniquement à lire,
+l’autre uniquement à écrire.
+
+18
+00:01:14.660 --> 00:01:17.410
+Le tube offre un pont direct
+et physique pour les données.
+
+19
+00:01:17.460 --> 00:01:22.230
+Mais le système vous oblige à gérer ces
+descripteurs à la main, et avec rigueur,
+
+20
+00:01:22.280 --> 00:01:25.080
+pour que le pont fonctionne
+en toute sécurité.
+
+21
+00:01:25.360 --> 00:01:29.610
+Quand le processus parent appelle fork, il
+se duplique et crée un processus enfant
+
+22
+00:01:29.660 --> 00:01:32.290
+identique, à côté de lui,
+en mode utilisateur.
+
+23
+00:01:32.340 --> 00:01:34.860
+L’enfant hérite de tout ce qu’a le parent.
+
+24
+00:01:35.000 --> 00:01:39.330
+Les deux processus ont donc chacun leur propre
+paire de descripteurs de lecture et d’écriture,
+
+25
+00:01:39.380 --> 00:01:42.090
+qui pointent vers le même tampon du noyau.
+
+26
+00:01:42.140 --> 00:01:45.220
+D’où la règle d’or des tubes.
+
+27
+00:01:45.440 --> 00:01:47.840
+Les données ne doivent circuler
+que dans un seul sens.
+
+28
+00:01:48.080 --> 00:01:52.330
+Pour l’imposer, chaque processus doit
+couper les connexions qu’il ne compte pas
+
+29
+00:01:52.380 --> 00:01:57.170
+utiliser. Dans le montage habituel, le parent
+ferme avec close son extrémité de lecture et
+
+30
+00:01:57.220 --> 00:01:59.500
+l’enfant ferme son extrémité d’écriture.
+
+31
+00:01:59.700 --> 00:02:04.190
+Fermer ces descripteurs inutilisés est le seul
+moyen pour le noyau de connaître le vrai sens,
+
+32
+00:02:04.240 --> 00:02:05.390
+unique, du flux de données.
+
+33
+00:02:05.440 --> 00:02:10.530
+Le tube bien monté, le processus parent
+commence à utiliser l’appel write
+
+34
+00:02:10.580 --> 00:02:12.980
+pour pousser rapidement
+des octets dans le canal.
+
+35
+00:02:13.120 --> 00:02:16.120
+Mais ce tampon du noyau a
+une limite physique stricte.
+
+36
+00:02:16.380 --> 00:02:21.520
+Sous Linux, la capacité par défaut
+est exactement de 65 536 octets.
+
+37
+00:02:21.880 --> 00:02:25.910
+Une fois cette capacité de 64
+kilo-octets remplie, le noyau intervient.
+
+38
+00:02:25.960 --> 00:02:30.490
+Il bloque le processus parent et l’empêche
+d’écrire davantage jusqu’à ce que l’enfant
+
+39
+00:02:30.540 --> 00:02:32.390
+fasse une lecture pour
+libérer de la place.
+
+40
+00:02:32.440 --> 00:02:36.480
+Finalement, le processus enfant
+termine sa tâche et se termine.
+
+41
+00:02:36.860 --> 00:02:41.250
+À ce moment, il ne reste plus aucun
+descripteur de lecture ouvert dans tout le
+
+42
+00:02:41.300 --> 00:02:43.800
+système. Le noyau détecte cette absence.
+
+43
+00:02:44.000 --> 00:02:48.540
+Si le parent essaie d’écrire à nouveau, le
+noyau envoie aussitôt le signal SIGPIPE
+
+44
+00:02:48.600 --> 00:02:51.940
+et termine proprement le processus
+parent avec l’état de sortie 141.
+
+45
+00:02:52.460 --> 00:02:55.830
+Ces limites de capacité et ces signaux
+fatals ne sont pas des erreurs aléatoires.
+
+46
+00:02:55.880 --> 00:02:59.350
+Ce sont les règles strictes du
+noyau pour démonter proprement le
+
+47
+00:02:59.400 --> 00:03:03.060
+canal de communication. Revenons
+donc à notre problème initial.
+
+48
+00:03:03.460 --> 00:03:07.010
+Pourquoi notre premier programme s’est-il
+figé indéfiniment au lieu de recevoir ce
+
+49
+00:03:07.060 --> 00:03:10.960
+signal SIGPIPE ? Le coupable est
+une seule ligne de code manquante.
+
+50
+00:03:11.080 --> 00:03:14.640
+Le processus parent a oublié d’appeler
+close sur son propre descripteur de lecture.
+
+51
+00:03:15.040 --> 00:03:18.330
+Comme ce descripteur reste ouvert,
+le noyau applique ses règles à la
+
+52
+00:03:18.380 --> 00:03:22.880
+lettre. Il croit qu’un lecteur valide
+existe encore : le parent lui-même.
+
+53
+00:03:23.040 --> 00:03:26.830
+Le parent remplit rapidement
+le tampon de 65 536 octets.
+
+54
+00:03:26.880 --> 00:03:31.010
+Une fois plein, le noyau bloque le parent
+pour toujours, en attendant un lecteur qui
+
+55
+00:03:31.060 --> 00:03:32.840
+ne viendra jamais libérer la place.
+
+56
+00:03:33.180 --> 00:03:36.460
+Un seul descripteur non fermé
+crée un lecteur fantôme.
+
+57
+00:03:36.580 --> 00:03:40.390
+Ce petit oubli transforme un mécanisme
+de sécurité intégré en interblocage
+
+58
+00:03:40.440 --> 00:03:42.720
+permanent. Faisons un petit récapitulatif.
+
+59
+00:03:43.220 --> 00:03:45.840
+Quelle est la capacité exacte
+d’un tube sous Linux ?
+
+60
+00:03:46.960 --> 00:03:50.220
+65 536 octets. Deuxième question.
+
+61
+00:03:50.580 --> 00:03:54.000
+Quel signal est envoyé si un processus
+écrit dans un tube sans lecteur ?
+
+62
+00:03:54.580 --> 00:03:57.040
+SIGPIPE, qui donne l’état de sortie 141.
+
+63
+00:03:57.820 --> 00:04:02.240
+Ouvrez maintenant l’animation A5.2 dans le
+cours en ligne et faites le laboratoire TD4.

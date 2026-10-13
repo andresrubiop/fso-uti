@@ -1,0 +1,241 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.650
+Quand vous tapez dans le terminal une commande
+en plusieurs parties, elle semble être une seule
+
+2
+00:00:07.700 --> 00:00:12.870
+opération continue. Mais le shell découpe en
+fait cette ligne en trois programmes distincts,
+
+3
+00:00:12.920 --> 00:00:17.810
+totalement indépendants. Ces trois
+processus s’exécutent en mode utilisateur.
+
+4
+00:00:17.860 --> 00:00:22.390
+Ils sont au-dessus de la stricte frontière de
+privilèges, complètement isolés les uns des autres.
+
+5
+00:00:22.440 --> 00:00:28.450
+En bas, en mode noyau, le système crée des
+tubes anonymes : des tampons circulaires
+
+6
+00:00:28.500 --> 00:00:34.050
+en mémoire qui servent à passer les données. Pour
+toute suite de n commandes, le système construit n
+
+7
+00:00:34.100 --> 00:00:39.470
+moins 1 tubes. Pour l’instant, les programmes
+en mode utilisateur et les tubes du noyau sont
+
+8
+00:00:39.520 --> 00:00:44.050
+totalement déconnectés. Les données ne peuvent pas
+circuler tant qu’ils ne sont pas reliés dans un ordre
+
+9
+00:00:44.100 --> 00:00:49.670
+précis. Un pipeline est un
+chantier complexe : le shell doit
+
+10
+00:00:49.720 --> 00:00:54.850
+orchestrer chaque connexion avant qu’un
+seul octet ne bouge. Le shell procède
+
+11
+00:00:54.900 --> 00:01:00.310
+commande par commande. Il commence par un
+appel système pipe qui crée le tout premier
+
+12
+00:01:00.360 --> 00:01:05.670
+tampon circulaire dans le noyau. Ensuite, le
+shell exécute fork et duplique son propre
+
+13
+00:01:05.720 --> 00:01:10.650
+processus pour créer un ouvrier pour la première
+commande. Ce processus enfant doit diriger sa
+
+14
+00:01:10.700 --> 00:01:16.290
+sortie vers le nouveau canal. Il utilise dup2 pour
+copier le pointeur et remplace son descripteur
+
+15
+00:01:16.340 --> 00:01:20.090
+de sortie standard par une connexion
+directe à l’extrémité d’écriture du tube.
+
+16
+00:01:20.140 --> 00:01:25.290
+Comme l’enfant hérite de tous les descripteurs
+ouverts du parent, il ferme maintenant
+
+17
+00:01:25.340 --> 00:01:30.250
+les extrémités qu’il n’utilisera pas et coupe
+les connexions en trop. Sa sortie fixée dans
+
+18
+00:01:30.300 --> 00:01:36.270
+le pipeline, l’enfant exécute execvp : le
+processus du shell est entièrement remplacé par
+
+19
+00:01:36.320 --> 00:01:41.730
+le programme cible, ls. De retour dans le
+shell parent, le nettoyage continue : le
+
+20
+00:01:41.780 --> 00:01:45.930
+shell ferme l’extrémité d’écriture
+du tube qu’il a passée à l’enfant
+
+21
+00:01:45.980 --> 00:01:52.050
+et ne garde que l’extrémité de lecture pour le tour
+suivant. Cette combinaison de dup2 et execvp permet
+
+22
+00:01:52.100 --> 00:01:56.850
+à des programmes ordinaires d’écrire à l’aveugle dans
+des tubes du noyau. ls écrit simplement sur la sortie
+
+23
+00:01:56.900 --> 00:02:01.810
+standard, sans savoir que le shell
+l’a redirigée vers un tube. Le
+
+24
+00:02:01.860 --> 00:02:06.030
+shell répète exactement cette séquence pour
+les autres commandes : il crée de nouveaux
+
+25
+00:02:06.080 --> 00:02:10.910
+enfants, redirige leurs descripteurs
+d’entrée et de sortie et les transforme en
+
+26
+00:02:10.960 --> 00:02:17.890
+grep et wc. D’où la règle d’or des
+pipelines : chaque tube doit finir avec
+
+27
+00:02:17.940 --> 00:02:22.410
+exactement un descripteur d’écriture et un
+de lecture ouverts entre les deux processus
+
+28
+00:02:22.460 --> 00:02:28.030
+qui l’utilisent. Si le shell parent ou un processus
+enfant oublie de fermer un seul descripteur
+
+29
+00:02:28.080 --> 00:02:33.330
+inutilisé pendant la boucle, un écrivain
+en trop reste attaché au tube. Quand
+
+30
+00:02:33.380 --> 00:02:37.190
+un descripteur d’écriture en trop reste ouvert, le
+noyau suppose que d’autres données peuvent arriver ;
+
+31
+00:02:37.240 --> 00:02:42.150
+il n’envoie donc jamais de signal de fin de
+fichier. Cette section du guide de laboratoire
+
+32
+00:02:42.200 --> 00:02:47.510
+propose un exercice où l’on retire
+volontairement un seul close. Sans signal de fin
+
+33
+00:02:47.560 --> 00:02:52.110
+de fichier, la dernière commande du pipeline attend
+des données indéfiniment, ce qui provoque un
+
+34
+00:02:52.160 --> 00:02:57.810
+interblocage. Les pipelines échouent en silence
+: un seul close oublié entraîne une attente
+
+35
+00:02:57.860 --> 00:03:03.470
+infinie. Avec tous les descripteurs bien reliés et
+les extrémités inutiles fermées, le shell se met
+
+36
+00:03:03.520 --> 00:03:08.550
+en retrait. Les données traversent sans arrêt la
+frontière de privilèges : elles sortent d’un processus,
+
+37
+00:03:08.600 --> 00:03:13.830
+traversent le tube du noyau et entrent dans le
+suivant. La dernière tâche obligatoire du shell est
+
+38
+00:03:13.880 --> 00:03:18.590
+d’attendre. Il doit suivre et prendre acte
+de la fin de chaque processus enfant ;
+
+39
+00:03:18.640 --> 00:03:23.890
+sinon, ces processus terminés restent dans
+le système comme zombies. Pour savoir
+
+40
+00:03:23.940 --> 00:03:28.390
+si toute l’opération a réussi ou échoué,
+le shell récupère l’état de sortie
+
+41
+00:03:28.440 --> 00:03:32.690
+de la toute dernière commande de la chaîne.
+La barre verticale que vous tapez dans le
+
+42
+00:03:32.740 --> 00:03:36.470
+terminal repose entièrement sur une gestion
+rigoureuse des descripteurs et sur la composition
+
+43
+00:03:36.520 --> 00:03:41.210
+de processus. Récapitulons. Si
+un pipeline a quatre commandes,
+
+44
+00:03:41.260 --> 00:03:43.900
+combien de tubes le shell
+crée-t-il dans le noyau ?
+
+45
+00:03:44.280 --> 00:03:50.470
+Trois. n commandes demandent toujours n
+moins 1 tubes. Deuxième question : que
+
+46
+00:03:50.520 --> 00:03:55.210
+se passe-t-il si un processus parent oublie de fermer
+un descripteur d’écriture inutilisé ? La dernière
+
+47
+00:03:55.260 --> 00:03:59.750
+commande attend une fin de fichier qui ne vient
+jamais, d’où un interblocage. Ouvrez maintenant
+
+48
+00:03:59.800 --> 00:04:04.400
+l’animation A5.1 dans le cours en
+ligne et faites le laboratoire TD4.

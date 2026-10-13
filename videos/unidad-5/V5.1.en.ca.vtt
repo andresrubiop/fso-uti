@@ -1,0 +1,303 @@
+WEBVTT
+
+1
+00:00:03.020 --> 00:00:08.250
+En un programa típic en C, un procés pare
+pot necessitar enviar un flux continu de
+
+2
+00:00:08.300 --> 00:00:13.950
+dades a un procés fill. Però de vegades, en
+lloc d’acabar la feina, el flux de dades
+
+3
+00:00:14.000 --> 00:00:18.830
+s’atura de cop. El programa es
+congela del tot i el terminal deixa de
+
+4
+00:00:18.880 --> 00:00:21.560
+respondre. És un interbloqueig.
+
+5
+00:00:21.760 --> 00:00:26.310
+Passa quan un programa que hauria d’acabar
+la seva execució acaba esperant per sempre
+
+6
+00:00:26.360 --> 00:00:28.030
+un esdeveniment que no arribarà mai.
+
+7
+00:00:28.080 --> 00:00:32.820
+Si mirem la sortida del terminal, veiem que
+al final el sistema ha hagut d’intervenir
+
+8
+00:00:32.960 --> 00:00:36.860
+i matar el programa blocat després d’un
+temps límit, amb l’estat de sortida 124.
+
+9
+00:00:37.480 --> 00:00:42.490
+Llavors, per què un flux de bytes perfectament
+vàlid entre dos processos emparentats acaba
+
+10
+00:00:42.540 --> 00:00:44.380
+en un bloqueig permanent?
+
+11
+00:00:44.620 --> 00:00:48.400
+Per diagnosticar aquest bloqueig, cal
+mirar sota la frontera de privilegis.
+
+12
+00:00:48.480 --> 00:00:52.250
+Aquesta frontera separa els nostres programes,
+que corren en mode usuari, del nucli del
+
+13
+00:00:52.300 --> 00:00:57.550
+sistema. Quan un programa fa servir la crida
+al sistema pipe, crea una memòria intermèdia
+
+14
+00:00:57.600 --> 00:01:02.530
+circular dins del nucli. Funciona com un
+flux continu de bytes, que mou les dades
+
+15
+00:01:02.580 --> 00:01:05.240
+estrictament en ordre, sense
+fronteres entre missatges.
+
+16
+00:01:05.380 --> 00:01:10.240
+Després, el nucli torna al procés en mode
+usuari exactament dos descriptors de fitxer.
+
+17
+00:01:10.300 --> 00:01:14.460
+Un serveix només per llegir
+i l’altre només per escriure.
+
+18
+00:01:14.660 --> 00:01:17.410
+La canonada ofereix un pont
+directe i físic per a les dades.
+
+19
+00:01:17.460 --> 00:01:22.230
+Però el sistema operatiu t’exigeix
+gestionar a mà, i amb rigor, aquests
+
+20
+00:01:22.280 --> 00:01:25.080
+descriptors perquè el pont
+funcioni amb seguretat.
+
+21
+00:01:25.360 --> 00:01:29.610
+Quan el procés pare crida fork,
+es duplica i crea un procés fill
+
+22
+00:01:29.660 --> 00:01:32.290
+idèntic, al seu costat, en mode usuari.
+
+23
+00:01:32.340 --> 00:01:34.860
+El fill ho hereta tot del pare.
+
+24
+00:01:35.000 --> 00:01:39.330
+Això vol dir que els dos processos tenen ara el seu
+propi parell de descriptors de lectura i escriptura,
+
+25
+00:01:39.380 --> 00:01:42.090
+que apunten a la mateixa
+memòria intermèdia del nucli.
+
+26
+00:01:42.140 --> 00:01:45.220
+D’aquí surt la regla
+d’or de les canonades.
+
+27
+00:01:45.440 --> 00:01:47.840
+Les dades han d’anar en un sol sentit.
+
+28
+00:01:48.080 --> 00:01:52.330
+Per assegurar-ho, cada procés ha de
+tallar les connexions que no pensa
+
+29
+00:01:52.380 --> 00:01:57.170
+fer servir. En el muntatge habitual, el pare
+tanca amb close el seu extrem de lectura i
+
+30
+00:01:57.220 --> 00:01:59.500
+el fill tanca el seu extrem d’escriptura.
+
+31
+00:01:59.700 --> 00:02:04.190
+Tancar aquests descriptors sense ús és l’única
+manera que el nucli conegui el veritable sentit,
+
+32
+00:02:04.240 --> 00:02:05.390
+únic, del flux de dades.
+
+33
+00:02:05.440 --> 00:02:10.530
+Amb la canonada ben muntada, el procés
+pare comença a fer servir la crida write
+
+34
+00:02:10.580 --> 00:02:12.980
+per ficar bytes a tota velocitat al canal.
+
+35
+00:02:13.120 --> 00:02:16.120
+Però aquesta memòria intermèdia del
+nucli té un límit físic estricte.
+
+36
+00:02:16.380 --> 00:02:21.520
+A Linux, la capacitat per defecte
+és exactament de 65 536 bytes.
+
+37
+00:02:21.880 --> 00:02:25.910
+Quan aquesta capacitat de 64 kilobytes
+s’omple, el nucli hi intervé.
+
+38
+00:02:25.960 --> 00:02:30.490
+Bloca el procés pare i no el deixa
+escriure més dades fins que el fill
+
+39
+00:02:30.540 --> 00:02:32.390
+fa una lectura i allibera espai.
+
+40
+00:02:32.440 --> 00:02:36.480
+Al final, el procés fill
+acaba la seva tasca i surt.
+
+41
+00:02:36.860 --> 00:02:41.250
+Quan passa això, no queda cap
+descriptor de lectura obert enlloc del
+
+42
+00:02:41.300 --> 00:02:43.800
+sistema. El nucli
+detecta aquesta absència.
+
+43
+00:02:44.000 --> 00:02:48.540
+Si el pare intenta escriure de nou, el
+nucli envia immediatament el senyal SIGPIPE
+
+44
+00:02:48.600 --> 00:02:51.940
+i acaba netament el procés pare
+amb l’estat de sortida 141.
+
+45
+00:02:52.460 --> 00:02:55.830
+Aquests límits de capacitat i aquests
+senyals fatals no són errors a l’atzar.
+
+46
+00:02:55.880 --> 00:02:59.350
+Són les regles estrictes que aplica el
+nucli per desmuntar ordenadament el
+
+47
+00:02:59.400 --> 00:03:03.060
+canal de comunicació. Tornem,
+doncs, al problema del principi.
+
+48
+00:03:03.460 --> 00:03:07.010
+Per què el nostre primer programa s’ha
+congelat per sempre en lloc de rebre aquell
+
+49
+00:03:07.060 --> 00:03:10.960
+senyal SIGPIPE? El culpable és
+una sola línia de codi que falta.
+
+50
+00:03:11.080 --> 00:03:14.640
+El procés pare ha oblidat cridar close
+sobre el seu propi descriptor de lectura.
+
+51
+00:03:15.040 --> 00:03:18.330
+Com que aquest descriptor continua obert,
+el nucli aplica les seves regles al peu
+
+52
+00:03:18.380 --> 00:03:22.880
+de la lletra. Creu que encara existeix
+un lector vàlid: el mateix pare.
+
+53
+00:03:23.040 --> 00:03:26.830
+El pare omple ràpidament la
+memòria intermèdia de 65 536 bytes.
+
+54
+00:03:26.880 --> 00:03:31.010
+Un cop plena, el nucli bloca el pare
+per sempre, esperant un lector que
+
+55
+00:03:31.060 --> 00:03:32.840
+no arribarà mai a alliberar l’espai.
+
+56
+00:03:33.180 --> 00:03:36.460
+Un sol descriptor sense tancar
+crea un lector fantasma.
+
+57
+00:03:36.580 --> 00:03:40.390
+Aquest petit descuit converteix un mecanisme
+de seguretat del sistema en un interbloqueig
+
+58
+00:03:40.440 --> 00:03:42.720
+permanent. Fem un repàs ràpid.
+
+59
+00:03:43.220 --> 00:03:45.840
+Quina és la capacitat exacta
+d’una canonada a Linux?
+
+60
+00:03:46.960 --> 00:03:50.220
+65 536 bytes. Segona pregunta.
+
+61
+00:03:50.580 --> 00:03:54.000
+Quin senyal s’envia si un procés escriu
+en una canonada que no té lectors?
+
+62
+00:03:54.580 --> 00:03:57.040
+SIGPIPE, que provoca
+l’estat de sortida 141.
+
+63
+00:03:57.820 --> 00:04:02.240
+Ara obre l’animació A5.2 a
+l’aula i fes el laboratori TD4.

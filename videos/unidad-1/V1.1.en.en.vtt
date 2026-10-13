@@ -103,7 +103,7 @@ The journey begins at the top two layers.
 22
 00:01:28.900 --> 00:01:32.490
 Applications, where your programs and
-bash live, sitting just above the system
+Bash live, sitting just above the system
 
 23
 00:01:32.540 --> 00:01:38.010
@@ -229,13 +229,13 @@ while iOS runs on the XNU kernel.
 
 48
 00:03:15.280 --> 00:03:19.630
-Even cars and medical devices rely on
-this setup, often using real-time micro
+Even cars and medical devices rely
+on this setup, often using real-time
 
 49
 00:03:19.680 --> 00:03:23.540
-kernels like QNX to guarantee
-exact timing and safety.
+microkernels like QNX to
+guarantee exact timing and safety.
 
 50
 00:03:24.200 --> 00:03:29.060

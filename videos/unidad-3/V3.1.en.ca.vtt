@@ -1,0 +1,244 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.240
+A Linux hi ha una filosofia de disseny
+que ho unifica tot: tot és un fitxer.
+
+2
+00:00:08.700 --> 00:00:13.330
+El sistema operatiu fa servir exactament la
+mateixa interfície, tant si és un fitxer
+
+3
+00:00:13.380 --> 00:00:20.360
+normal com un directori, un dispositiu de caràcters
+o de blocs, una canonada, una FIFO o un sòcol.
+
+4
+00:00:20.960 --> 00:00:25.790
+Com a usuaris, tractem amb tots aquests elements
+mitjançant noms de text coneguts i llegibles,
+
+5
+00:00:25.840 --> 00:00:31.630
+com notas.txt. Però si mires dins de
+l’estructura de metadades central de qualsevol
+
+6
+00:00:31.680 --> 00:00:37.310
+fitxer, l’inode, notaràs una absència
+sorprenent: el nom del fitxer no hi apareix
+
+7
+00:00:37.360 --> 00:00:42.470
+enlloc. Si el fitxer no guarda el
+seu propi nom, on viu exactament
+
+8
+00:00:42.520 --> 00:00:47.230
+aquest text? I com troba el nucli
+les dades físiques al disc quan
+
+9
+00:00:47.280 --> 00:00:52.750
+les demanes? Per al nucli, la veritable
+identitat d’un fitxer és el seu inode,
+
+10
+00:00:52.800 --> 00:00:55.140
+que es reconeix només per un número únic.
+
+11
+00:00:55.660 --> 00:00:59.900
+Els sistemes Unix separen a propòsit el
+contingut d’un fitxer de les seves metadades.
+
+12
+00:01:00.780 --> 00:01:05.680
+Dins de l’inode, el nucli guarda el
+tipus de fitxer, els permisos d’accés,
+
+13
+00:01:05.820 --> 00:01:12.020
+el propietari, la mida total i quatre marques
+de temps: accés, modificació, canvi i creació.
+
+14
+00:01:12.580 --> 00:01:15.080
+Fixa’t que no hi ha cap camp per al nom.
+
+15
+00:01:15.520 --> 00:01:20.290
+L’inode també guarda extents: punters que
+diuen al sistema de fitxers exactament
+
+16
+00:01:20.340 --> 00:01:25.210
+on són els trams contigus de blocs de
+dades de 4 kilobytes a la partició ext4
+
+17
+00:01:25.260 --> 00:01:29.820
+del disc. El nom que falta viu,
+en realitat, dins d’un directori.
+
+18
+00:01:30.040 --> 00:01:34.290
+Un directori és simplement un altre fitxer,
+però les seves dades formen una llista de noms
+
+19
+00:01:34.340 --> 00:01:37.180
+de text, cadascun amb
+el seu número d’inode.
+
+20
+00:01:37.360 --> 00:01:42.310
+També té una entrada per a si mateix, marcada
+amb un punt, i una per al pare, marcada amb
+
+21
+00:01:42.360 --> 00:01:47.230
+dos punts. Un directori és només
+un mapa: tradueix cadenes de text
+
+22
+00:01:47.280 --> 00:01:51.310
+còmodes per a les persones als números d’inode
+que el nucli necessita per buscar les teves
+
+23
+00:01:51.360 --> 00:01:56.370
+dades. Seguim els passos exactes del
+nucli per resoldre un camí absolut,
+
+24
+00:01:56.420 --> 00:01:59.760
+com /home/student/notas.txt.
+
+25
+00:02:00.360 --> 00:02:02.590
+El procés comença a l’inode arrel.
+
+26
+00:02:02.640 --> 00:02:06.830
+El nucli llegeix la taula d’aquest directori,
+recorre les entrades de text i busca
+
+27
+00:02:06.880 --> 00:02:09.160
+el número d’inode de la cadena home.
+
+28
+00:02:10.200 --> 00:02:15.090
+Després passa a l’inode de home, llegeix la
+seva taula de directori i troba l’entrada
+
+29
+00:02:15.140 --> 00:02:20.460
+de student. Ja a l’inode de student,
+el nucli llegeix una última taula.
+
+30
+00:02:20.680 --> 00:02:25.740
+Allà troba notas.txt i n’extreu
+el número d’inode de destinació.
+
+31
+00:02:26.120 --> 00:02:30.670
+Aquest recorregut component a component
+és el pont obligatori entre l’abstracció
+
+32
+00:02:30.720 --> 00:02:34.740
+d’un camí en mode usuari i
+la realitat física del disc.
+
+33
+00:02:35.100 --> 00:02:39.370
+Com que el nom està del tot separat de
+les dades físiques, un mateix fitxer
+
+34
+00:02:39.420 --> 00:02:41.680
+pot tenir diversos noms independents.
+
+35
+00:02:41.840 --> 00:02:47.420
+Això és un enllaç dur: una nova entrada
+de directori que apunta al mateix inode.
+
+36
+00:02:47.500 --> 00:02:52.460
+L’inode compta quants noms hi
+apunten amb el comptador st_nlink.
+
+37
+00:02:52.600 --> 00:02:56.750
+El nucli només allibera els blocs de dades
+quan arriba a zero i cap procés no té
+
+38
+00:02:56.800 --> 00:02:59.960
+el fitxer obert. Un enllaç
+simbòlic funciona diferent.
+
+39
+00:03:00.300 --> 00:03:04.730
+Com es veu en aquesta sortida del terminal,
+un enllaç simbòlic és un inode totalment nou.
+
+40
+00:03:04.780 --> 00:03:10.070
+La sortida mostra que atajo té
+un número d’inode diferent,
+
+41
+00:03:10.120 --> 00:03:16.240
+12190687, diferent del del
+fitxer original, 12190686.
+
+42
+00:03:16.960 --> 00:03:20.500
+El seu contingut és només un camí
+de text que apunta a un altre lloc.
+
+43
+00:03:21.140 --> 00:03:25.750
+El sistema de fitxers de Linux no és un conjunt
+rígid de carpetes, sinó una xarxa flexible
+
+44
+00:03:25.800 --> 00:03:29.840
+de punters que uneix noms
+llegibles amb identitats físiques.
+
+45
+00:03:30.320 --> 00:03:33.620
+Repassem. Un inode
+conté el nom del fitxer?
+
+46
+00:03:35.700 --> 00:03:39.500
+No, el nom viu a l’entrada de
+directori, que apunta a l’inode.
+
+47
+00:03:39.920 --> 00:03:43.000
+Quina diferència hi ha entre un
+enllaç dur i un enllaç simbòlic?
+
+48
+00:03:45.120 --> 00:03:49.650
+Un enllaç dur apunta directament al mateix
+inode; un enllaç simbòlic és un inode
+
+49
+00:03:49.700 --> 00:03:51.330
+a part el contingut del qual és un camí.
+
+50
+00:03:51.380 --> 00:03:57.040
+Ara obre l’animació A3.1 a
+l’aula i fes el laboratori TD2.

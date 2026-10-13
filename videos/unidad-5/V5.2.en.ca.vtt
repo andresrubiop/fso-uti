@@ -1,0 +1,240 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.650
+Quan escrius al terminal una ordre
+de diverses parts, sembla una sola
+
+2
+00:00:07.700 --> 00:00:12.870
+operació contínua. Però en realitat el shell
+divideix aquesta línia en tres programes diferents
+
+3
+00:00:12.920 --> 00:00:17.810
+i totalment independents. Aquests tres
+processos s’executen en mode usuari.
+
+4
+00:00:17.860 --> 00:00:22.390
+Són sobre l’estricta frontera de
+privilegis, completament aïllats entre si.
+
+5
+00:00:22.440 --> 00:00:28.450
+A baix, en mode nucli, el sistema operatiu crea
+canonades sense nom: memòries intermèdies circulars
+
+6
+00:00:28.500 --> 00:00:34.050
+que serveixen per passar dades. Per a qualsevol
+seqüència de n ordres, el sistema construeix n
+
+7
+00:00:34.100 --> 00:00:39.470
+menys 1 canonades. De moment, els programes en
+mode usuari i les canonades del nucli estan
+
+8
+00:00:39.520 --> 00:00:44.050
+totalment desconnectats. Les dades no poden
+circular fins que no es connecten en una seqüència
+
+9
+00:00:44.100 --> 00:00:49.670
+precisa. Una canonada d’ordres és
+una obra complexa: el shell ha
+
+10
+00:00:49.720 --> 00:00:54.850
+d’orquestrar cada connexió abans que es
+mogui un sol byte. El shell ho resol
+
+11
+00:00:54.900 --> 00:01:00.310
+ordre per ordre. Comença amb una crida
+al sistema pipe que crea la primera
+
+12
+00:01:00.360 --> 00:01:05.670
+memòria intermèdia circular al nucli. Després,
+el shell executa fork i duplica el seu propi
+
+13
+00:01:05.720 --> 00:01:10.650
+procés per crear un treballador per a la primera
+ordre. Aquest procés fill ha de dirigir la seva
+
+14
+00:01:10.700 --> 00:01:16.290
+sortida al nou canal. Fa servir dup2 per copiar el
+punter i substitueix el seu descriptor de sortida
+
+15
+00:01:16.340 --> 00:01:20.090
+estàndard per una connexió directa a
+l’extrem d’escriptura de la canonada.
+
+16
+00:01:20.140 --> 00:01:25.290
+Com que el fill hereta del pare tots
+els descriptors oberts, ara tanca
+
+17
+00:01:25.340 --> 00:01:30.250
+els extrems que no farà servir i talla les
+connexions sobrants. Amb la sortida ja fixada a
+
+18
+00:01:30.300 --> 00:01:36.270
+la canonada, el fill executa execvp: el
+procés del shell se substitueix del tot pel
+
+19
+00:01:36.320 --> 00:01:41.730
+programa de destinació, ls. De tornada
+al shell pare, continua la neteja: el
+
+20
+00:01:41.780 --> 00:01:45.930
+shell tanca l’extrem d’escriptura de
+la canonada que ha passat al fill
+
+21
+00:01:45.980 --> 00:01:52.050
+i es queda només amb l’extrem de lectura per a la volta
+següent. Aquesta combinació de dup2 i execvp permet
+
+22
+00:01:52.100 --> 00:01:56.850
+que programes normals escriguin a cegues en canonades
+del nucli. ls simplement escriu a la sortida
+
+23
+00:01:56.900 --> 00:02:01.810
+estàndard, sense saber que el shell
+l’ha redirigida a una canonada. El
+
+24
+00:02:01.860 --> 00:02:06.030
+shell repeteix exactament aquesta
+seqüència amb la resta d’ordres: crea nous
+
+25
+00:02:06.080 --> 00:02:10.910
+fills, redirigeix els seus descriptors
+d’entrada i sortida i els transforma en
+
+26
+00:02:10.960 --> 00:02:17.890
+grep i wc. D’aquí surt la regla d’or de les
+canonades: cada canonada ha d’acabar amb
+
+27
+00:02:17.940 --> 00:02:22.410
+exactament un descriptor d’escriptura i un
+de lectura oberts entre els dos processos
+
+28
+00:02:22.460 --> 00:02:28.030
+que la fan servir. Si el shell pare o un
+procés fill no tanca un sol descriptor
+
+29
+00:02:28.080 --> 00:02:33.330
+sense ús durant el bucle, queda un escriptor
+de més connectat a la canonada. Quan
+
+30
+00:02:33.380 --> 00:02:37.190
+un descriptor d’escriptura de més continua obert,
+el nucli suposa que poden arribar més dades;
+
+31
+00:02:37.240 --> 00:02:42.150
+per això no envia mai el senyal de final de
+fitxer. Aquesta secció de la guia del laboratori
+
+32
+00:02:42.200 --> 00:02:47.510
+planteja un exercici en què es treu a propòsit
+un sol close. Sense el senyal de final
+
+33
+00:02:47.560 --> 00:02:52.110
+de fitxer, l’última ordre de la canonada
+espera dades indefinidament i es produeix un
+
+34
+00:02:52.160 --> 00:02:57.810
+interbloqueig. Les canonades fallen en silenci:
+un sol close oblidat provoca una espera
+
+35
+00:02:57.860 --> 00:03:03.470
+infinita. Amb tots els descriptors ben connectats
+i els extrems sense ús tancats, el shell es fa
+
+36
+00:03:03.520 --> 00:03:08.550
+a un costat. Les dades circulen sense parar a través
+de la frontera de privilegis: surten d’un procés,
+
+37
+00:03:08.600 --> 00:03:13.830
+passen per la canonada del nucli i entren al
+següent. L’última tasca obligatòria del shell és
+
+38
+00:03:13.880 --> 00:03:18.590
+esperar. Ha de seguir i registrar la
+finalització de cada procés fill;
+
+39
+00:03:18.640 --> 00:03:23.890
+si no ho fa, aquests processos acabats es
+queden al sistema com a zombis. Per saber
+
+40
+00:03:23.940 --> 00:03:28.390
+si tota l’operació ha tingut èxit o ha
+fallat, el shell recull l’estat de sortida
+
+41
+00:03:28.440 --> 00:03:32.690
+de l’última ordre de la cadena.
+La barra vertical que escrius al
+
+42
+00:03:32.740 --> 00:03:36.470
+terminal depèn del tot d’una gestió rigorosa
+dels descriptors i de la composició
+
+43
+00:03:36.520 --> 00:03:41.210
+de processos. Repassem. Si
+una canonada té quatre ordres,
+
+44
+00:03:41.260 --> 00:03:43.900
+quantes canonades crea el shell al nucli?
+
+45
+00:03:44.280 --> 00:03:50.470
+Tres. n ordres sempre necessiten n
+menys 1 canonades. Segona pregunta: què
+
+46
+00:03:50.520 --> 00:03:55.210
+passa si un procés pare oblida tancar un
+descriptor d’escriptura sense ús? L’última
+
+47
+00:03:55.260 --> 00:03:59.750
+ordre espera un final de fitxer que no arriba
+mai i es produeix un interbloqueig. Ara obre
+
+48
+00:03:59.800 --> 00:04:04.400
+l’animació A5.1 a l’aula
+i fes el laboratori TD4.

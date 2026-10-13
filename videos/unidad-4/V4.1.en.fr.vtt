@@ -1,0 +1,270 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:09.040
+Quand vous ouvrez un terminal Linux et
+tapez une commande comme ls > out.txt,
+
+2
+00:00:09.240 --> 00:00:12.100
+vous déclenchez une réaction
+en chaîne bien précise.
+
+3
+00:00:12.440 --> 00:00:16.260
+Pour comprendre comment cela marche,
+il faut d’abord définir un processus.
+
+4
+00:00:16.540 --> 00:00:20.130
+Un processus est un programme en
+cours d’exécution, avec son contexte.
+
+5
+00:00:20.180 --> 00:00:25.800
+Ce contexte comprend sa mémoire, ses registres
+CPU et ses descripteurs de fichiers ouverts.
+
+6
+00:00:26.120 --> 00:00:28.660
+Ce schéma montre
+l’architecture du système.
+
+7
+00:00:28.840 --> 00:00:31.750
+Le shell s’exécute en mode utilisateur,
+au-dessus de la frontière de privilèges.
+
+8
+00:00:31.800 --> 00:00:37.250
+En dessous, le mode noyau. Pour lancer une
+commande, le shell descend faire l’appel système
+
+9
+00:00:37.300 --> 00:00:42.290
+fork, qui crée un processus enfant : un
+clone exact, avec la même disposition mémoire
+
+10
+00:00:42.340 --> 00:00:44.180
+et les mêmes descripteurs ouverts.
+
+11
+00:00:44.640 --> 00:00:47.840
+Sous Linux, cloner le shell existant
+est la première étape obligatoire.
+
+12
+00:00:47.940 --> 00:00:51.830
+Il délègue ainsi le nouveau travail à un processus
+subordonné, tandis que le shell d’origine reste
+
+13
+00:00:51.880 --> 00:00:54.220
+actif, prêt à accepter
+votre commande suivante.
+
+14
+00:00:54.600 --> 00:00:57.950
+Concentrons-nous maintenant
+sur le processus enfant.
+
+15
+00:00:58.000 --> 00:01:03.350
+Avant de lancer la commande de listage,
+il doit traiter la redirection
+
+16
+00:01:03.400 --> 00:01:09.280
+> out.txt. Ce schéma animé montre
+comment l’enfant gère ce flux de texte.
+
+17
+00:01:09.440 --> 00:01:14.710
+Avec l’appel système dup2, le processus
+enfant modifie son propre contexte et dirige
+
+18
+00:01:14.760 --> 00:01:17.940
+le descripteur de sortie
+directement vers le fichier texte.
+
+19
+00:01:18.560 --> 00:01:22.700
+Vient ensuite une transformation
+cruciale avec l’appel système execve.
+
+20
+00:01:22.780 --> 00:01:27.270
+Le processus enfant remplace le code copié
+du shell par le code du programme ls.
+
+21
+00:01:27.320 --> 00:01:31.890
+Remarquez que le descripteur qui pointe vers
+le fichier texte reste exactement où il
+
+22
+00:01:31.940 --> 00:01:37.310
+était. Comme execve conserve ces
+descripteurs, le programme ls écrit dans le
+
+23
+00:01:37.360 --> 00:01:41.220
+fichier texte automatiquement. Il n’a jamais
+besoin de savoir que sa sortie a été redirigée.
+
+24
+00:01:41.940 --> 00:01:44.810
+Une fois le code chargé, le
+processus a besoin de temps CPU.
+
+25
+00:01:44.860 --> 00:01:49.990
+Il passe par trois états : prêt, en
+attente du CPU ; en exécution, il s’exécute
+
+26
+00:01:50.040 --> 00:01:53.130
+vraiment ; et bloqué, s’il
+doit attendre une E/S disque.
+
+27
+00:01:53.180 --> 00:01:58.020
+Pour partager le CPU, le système
+effectue un changement de contexte.
+
+28
+00:01:58.300 --> 00:02:01.830
+Il sauvegarde les registres du processus
+en cours et charge les registres
+
+29
+00:02:01.880 --> 00:02:03.710
+sauvegardés du suivant dans la file.
+
+30
+00:02:03.760 --> 00:02:05.900
+L’ordonnanceur décide à qui c’est le tour.
+
+31
+00:02:06.580 --> 00:02:12.950
+Sous Linux, depuis la version 6.6, le noyau
+utilise l’algorithme EEVDF, qui partage le
+
+32
+00:02:13.000 --> 00:02:17.640
+CPU en attribuant du temps virtuel, pondéré
+par la priorité de chaque processus.
+
+33
+00:02:18.320 --> 00:02:22.930
+execve garantit que votre programme démarre
+avec les bons fichiers, et les changements
+
+34
+00:02:22.980 --> 00:02:26.100
+de contexte rapides de l’ordonnanceur
+lui permettent de partager le CPU.
+
+35
+00:02:26.580 --> 00:02:30.550
+Ainsi, votre commande redirigée
+s’exécute sans heurt avec le reste du
+
+36
+00:02:30.600 --> 00:02:35.750
+système. Finalement, la commande ls
+finit de lire le répertoire et termine
+
+37
+00:02:35.800 --> 00:02:39.460
+son exécution. Mais le processus
+ne disparaît pas complètement.
+
+38
+00:02:39.540 --> 00:02:43.270
+Son bloc de contrôle de processus,
+ou PCB, reste en mémoire.
+
+39
+00:02:43.320 --> 00:02:45.060
+Le processus est maintenant un zombie.
+
+40
+00:02:45.340 --> 00:02:49.170
+Le PCB est conservé pour que le shell
+parent puisse faire l’appel système wait.
+
+41
+00:02:49.220 --> 00:02:53.920
+Une fois l’état de sortie final récupéré,
+le noyau supprime le PCB du zombie.
+
+42
+00:02:54.320 --> 00:02:57.720
+Cet état de sortie détaille
+précisément la fin du programme.
+
+43
+00:02:57.880 --> 00:03:02.370
+Il indique au parent si le programme s’est terminé
+proprement ou s’il a planté, peut-être à cause
+
+44
+00:03:02.420 --> 00:03:04.380
+d’un défaut de page qui
+a déclenché un signal.
+
+45
+00:03:04.600 --> 00:03:08.040
+Dans cette sortie du terminal,
+vous voyez un exemple de plantage.
+
+46
+00:03:08.160 --> 00:03:13.690
+Un état de sortie de 139 indique que le processus
+a été tué par une erreur de segmentation,
+
+47
+00:03:13.740 --> 00:03:18.320
+SIGSEGV, soit le signal 11 ajouté à
+128, selon la convention du shell.
+
+48
+00:03:18.600 --> 00:03:22.340
+Chaque commande que vous lancez
+suit ce cycle chronologique strict.
+
+49
+00:03:22.480 --> 00:03:27.190
+Elle clone un processus existant,
+transforme son code, partage le CPU grâce à
+
+50
+00:03:27.240 --> 00:03:30.340
+l’ordonnanceur et finit en
+rapportant son état au noyau.
+
+51
+00:03:30.720 --> 00:03:35.250
+Récapitulons. Quel appel système remplace le
+programme du processus tout en gardant ses
+
+52
+00:03:35.300 --> 00:03:36.480
+descripteurs de fichiers ?
+
+53
+00:03:38.520 --> 00:03:43.290
+execve. Dans quel état est un processus
+terminé dont le parent n’a pas encore
+
+54
+00:03:43.340 --> 00:03:44.300
+appelé wait ?
+
+55
+00:03:46.380 --> 00:03:53.720
+Zombie. Ouvrez maintenant les animations A4.3 et A4.4
+dans le cours en ligne et faites le laboratoire TD3.

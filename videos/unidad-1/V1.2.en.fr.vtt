@@ -1,0 +1,299 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.190
+Chaque seconde, votre machine
+traite d’énormes flux de données.
+
+2
+00:00:08.240 --> 00:00:11.860
+Sans le moindre accroc, tout
+semble parfaitement stable.
+
+3
+00:00:12.480 --> 00:00:15.260
+Mais soudain, une défaillance
+logicielle survient.
+
+4
+00:00:15.640 --> 00:00:19.600
+Un simple pilote de disque tente
+d’accéder à une adresse mémoire interdite.
+
+5
+00:00:20.000 --> 00:00:23.680
+Dans certains systèmes, cette
+seule erreur se propage en cascade.
+
+6
+00:00:23.880 --> 00:00:27.760
+Toute la machine se fige, et la seule
+option est un redémarrage forcé.
+
+7
+00:00:28.140 --> 00:00:32.290
+Dans d’autres systèmes, ce même pilote
+défaillant est isolé instantanément.
+
+8
+00:00:32.340 --> 00:00:36.850
+Il redémarre discrètement en arrière-plan,
+et la machine continue comme si de rien
+
+9
+00:00:36.900 --> 00:00:40.660
+n’était. La différence tient
+à la frontière de privilèges.
+
+10
+00:00:41.000 --> 00:00:45.410
+C’est la ligne stricte qui sépare le mode
+utilisateur, en haut, du mode noyau, en
+
+11
+00:00:45.460 --> 00:00:50.550
+bas. Qu’un système d’exploitation survive à
+une panne dépend entièrement de la part de
+
+12
+00:00:50.600 --> 00:00:54.160
+son logiciel autorisée à franchir
+cette frontière vers le mode noyau.
+
+13
+00:00:54.500 --> 00:00:58.890
+D’abord, l’architecture monolithique,
+celle de Linux et des BSD.
+
+14
+00:00:59.350 --> 00:01:03.860
+Ici, tous les services centraux, l’ordonnanceur, la
+gestion de la mémoire, les systèmes de fichiers et
+
+15
+00:01:03.910 --> 00:01:06.490
+les pilotes, sont regroupés en mode noyau.
+
+16
+00:01:06.870 --> 00:01:09.190
+Cette conception est extrêmement rapide.
+
+17
+00:01:09.410 --> 00:01:13.640
+Une application n’a besoin que d’un appel
+système : un seul passage à l’aller et un seul
+
+18
+00:01:13.690 --> 00:01:18.800
+au retour. Mais comme tout partage le
+mode noyau, un bogue dans un seul pilote
+
+19
+00:01:18.850 --> 00:01:22.650
+peut corrompre l’espace mémoire commun
+et faire tomber tout le système.
+
+20
+00:01:23.350 --> 00:01:25.800
+Linux est monolithique, mais modulaire.
+
+21
+00:01:25.850 --> 00:01:31.480
+Cette sortie de commande, sur la machine
+du cours, montre 258 modules chargés : des
+
+22
+00:01:31.530 --> 00:01:34.250
+pilotes que le système peut
+ajouter ou retirer à chaud.
+
+23
+00:01:34.690 --> 00:01:40.450
+Puis vient le micronoyau, utilisé par
+des systèmes comme seL4, QNX et MINIX 3.
+
+24
+00:01:40.750 --> 00:01:46.150
+Cette conception remonte en mode utilisateur la plupart des
+services, comme les systèmes de fichiers et les pilotes.
+
+25
+00:01:46.430 --> 00:01:49.410
+Seul le strict minimum reste
+sous la frontière de privilèges.
+
+26
+00:01:49.570 --> 00:01:51.490
+Cela offre une isolation stricte.
+
+27
+00:01:51.710 --> 00:01:54.880
+Si un pilote tombe en panne en mode utilisateur,
+le système le redémarre simplement.
+
+28
+00:01:54.930 --> 00:01:57.290
+Le noyau lui-même n’est jamais touché.
+
+29
+00:01:57.630 --> 00:01:59.250
+La contrepartie, ce sont les performances.
+
+30
+00:01:59.910 --> 00:02:02.960
+Chaque opération exige alors bien plus de
+messages et de passages de frontière pour le même
+
+31
+00:02:03.010 --> 00:02:08.190
+travail. Il existe aussi une approche
+hybride, celle de Windows NT et de macOS.
+
+32
+00:02:08.610 --> 00:02:13.500
+C’est un compromis : la plupart des services restent
+en mode noyau, mais certains passent en espace
+
+33
+00:02:13.550 --> 00:02:16.710
+utilisateur, avec les avantages
+et les problèmes des deux.
+
+34
+00:02:17.370 --> 00:02:21.540
+Décider de ce qui s’exécute en mode noyau est
+un choix d’ingénierie strict, entre la vitesse
+
+35
+00:02:21.590 --> 00:02:24.410
+d’exécution brute et la
+résilience par l’isolation.
+
+36
+00:02:24.990 --> 00:02:30.200
+Alors, comment ces architectures de noyau
+complexes se chargent-elles en mémoire à partir
+
+37
+00:02:30.250 --> 00:02:32.770
+d’une machine complètement éteinte ?
+
+38
+00:02:33.250 --> 00:02:35.050
+Cela se fait en quatre étapes.
+
+39
+00:02:35.570 --> 00:02:37.880
+D’abord, le micrologiciel UEFI.
+
+40
+00:02:37.930 --> 00:02:42.320
+Il teste le matériel, initialise la
+mémoire et les bus, et cherche dans sa
+
+41
+00:02:42.370 --> 00:02:44.330
+mémoire non volatile les
+instructions de démarrage.
+
+42
+00:02:44.690 --> 00:02:48.380
+Ensuite, le chargeur d’amorçage,
+comme GRUB ou systemd-boot.
+
+43
+00:02:48.430 --> 00:02:54.350
+Il prend le noyau, appelé vmlinuz, et un
+système de fichiers initial appelé initramfs,
+
+44
+00:02:54.430 --> 00:02:55.930
+et les charge en mémoire.
+
+45
+00:02:56.510 --> 00:03:01.200
+L’étape 3 est le noyau. Il se décompresse,
+met en place la mémoire virtuelle, détecte les
+
+46
+00:03:01.250 --> 00:03:05.250
+processeurs et lance le tout
+premier processus, le PID 1.
+
+47
+00:03:05.750 --> 00:03:11.300
+Enfin, l’espace utilisateur. Le processus
+systemd, qui tourne comme PID 1, démarre tous les
+
+48
+00:03:11.350 --> 00:03:14.890
+services restants en parallèle
+jusqu’à l’invite de connexion.
+
+49
+00:03:15.070 --> 00:03:17.440
+Tous les autres processus
+descendent de ce nœud unique.
+
+50
+00:03:17.490 --> 00:03:22.000
+On peut mesurer exactement la durée de
+tout ce démarrage sur la machine du
+
+51
+00:03:22.050 --> 00:03:25.170
+cours avec la commande systemd-analyze.
+
+52
+00:03:25.390 --> 00:03:27.330
+Ce graphique montre la
+répartition du temps.
+
+53
+00:03:27.610 --> 00:03:33.340
+Le micrologiciel a pris 9,1 secondes, le chargeur
+4,9 secondes et l’espace utilisateur 14,5
+
+54
+00:03:33.390 --> 00:03:37.570
+secondes. L’étape du noyau
+n’a pris que 2,6 secondes.
+
+55
+00:03:37.990 --> 00:03:42.210
+Bien qu’il soit le composant le plus complexe
+et le plus critique de toute l’architecture,
+
+56
+00:03:42.490 --> 00:03:45.440
+le chargement du noyau est en fait
+l’étape la plus rapide du démarrage.
+
+57
+00:03:45.490 --> 00:03:50.280
+La résilience d’un système d’exploitation
+dépend de son architecture, et le mettre en
+
+58
+00:03:50.330 --> 00:03:54.310
+marche exige un passage de relais
+précis, en quatre étapes successives.
+
+59
+00:03:54.950 --> 00:03:59.380
+Récapitulons. Dans quelle architecture de noyau
+un pilote défaillant fait-il tomber tout le
+
+60
+00:03:59.430 --> 00:04:02.470
+système ? L’architecture monolithique.
+
+61
+00:04:03.110 --> 00:04:06.890
+Question 2 : quelle étape du démarrage est
+la plus courte sur la machine du cours ?
+
+62
+00:04:07.330 --> 00:04:14.850
+Le noyau. Ouvrez maintenant les animations A1.2 et A1.3
+dans le cours en ligne et faites le laboratoire TD0.

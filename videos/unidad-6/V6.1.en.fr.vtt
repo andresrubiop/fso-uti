@@ -1,0 +1,259 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.750
+Vous avez déjà eu un programme bloqué dans le
+terminal et appuyé sur Ctrl-C pour le tuer ?
+
+2
+00:00:07.800 --> 00:00:10.640
+Cet arrêt instantané a l’air magique.
+
+3
+00:00:10.720 --> 00:00:13.500
+Mais il repose sur un
+mécanisme bien précis.
+
+4
+00:00:14.000 --> 00:00:18.100
+Quand vous appuyez sur ces touches, le terminal
+envoie un signal au processus en cours.
+
+5
+00:00:18.380 --> 00:00:22.780
+C’est une notification asynchrone qui
+dit au programme d’agir tout de suite.
+
+6
+00:00:23.020 --> 00:00:25.040
+Le principal émetteur est le noyau.
+
+7
+00:00:25.300 --> 00:00:29.390
+Si votre programme accède à une mémoire
+interdite, le noyau envoie le signal SIGSEGV pour
+
+8
+00:00:29.440 --> 00:00:34.190
+le terminer. Il envoie SIGPIPE en cas d’écriture
+dans un tube sans lecteur, ou SIGCHLD
+
+9
+00:00:34.240 --> 00:00:35.800
+quand un processus enfant se termine.
+
+10
+00:00:36.040 --> 00:00:39.690
+Et un processus peut envoyer directement
+un signal à un autre avec l’appel système
+
+11
+00:00:39.740 --> 00:00:44.690
+kill. Les signaux sont le moyen standard par
+lequel le système force un processus à réagir à
+
+12
+00:00:44.740 --> 00:00:48.750
+des événements extérieurs. Mais recevoir un
+signal ne veut pas dire que votre programme doit
+
+13
+00:00:48.800 --> 00:00:52.800
+planter sur-le-champ. Quand un signal
+arrive, votre processus a le choix.
+
+14
+00:00:53.060 --> 00:00:57.430
+Il peut accepter l’action par défaut, ignorer
+complètement le signal ou l’intercepter avec
+
+15
+00:00:57.480 --> 00:01:00.100
+sigaction pour exécuter un
+gestionnaire personnalisé.
+
+16
+00:01:00.560 --> 00:01:03.420
+Cette liberté a toutefois
+une limite stricte.
+
+17
+00:01:03.880 --> 00:01:07.850
+SIGKILL et SIGSTOP représentent l’autorité
+ultime de l’administrateur sur le
+
+18
+00:01:07.900 --> 00:01:12.930
+matériel. Comme l’indique le manuel, ces deux
+signaux ne peuvent jamais être interceptés,
+
+19
+00:01:12.980 --> 00:01:16.720
+ignorés ni bloqués, quelle que soit la
+façon dont le processus est programmé.
+
+20
+00:01:17.040 --> 00:01:20.790
+Vous pouvez programmer une réponse pour
+presque toute interruption, mais le noyau
+
+21
+00:01:20.840 --> 00:01:24.160
+garde le pouvoir absolu de
+suspendre ou de terminer votre code.
+
+22
+00:01:24.460 --> 00:01:27.640
+Savoir quand un signal
+prend effet est crucial.
+
+23
+00:01:28.160 --> 00:01:31.460
+Appeler kill n’exécute pas
+l’interruption instantanément.
+
+24
+00:01:31.540 --> 00:01:34.500
+Cela marque seulement le signal
+comme en attente dans le noyau.
+
+25
+00:01:34.840 --> 00:01:38.170
+Le noyau attend pour le délivrer
+que le processus repasse
+
+26
+00:01:38.220 --> 00:01:41.460
+en mode utilisateur, par exemple
+après un changement de contexte.
+
+27
+00:01:41.640 --> 00:01:46.190
+Et si votre processus est arrêté, les
+signaux qui arrivent, comme SIGUSR1,
+
+28
+00:01:46.240 --> 00:01:48.320
+ne sont pas perdus. Ils
+sont simplement bloqués.
+
+29
+00:01:48.680 --> 00:01:52.330
+Ce signal bloqué attend sagement dans
+une file, jusqu’à ce que le processus
+
+30
+00:01:52.380 --> 00:01:55.220
+reçoive le signal SIGCONT
+et reprenne son exécution.
+
+31
+00:01:55.580 --> 00:01:58.180
+Les signaux ne disparaissent
+pas dans le vide.
+
+32
+00:01:58.680 --> 00:02:02.130
+Tenir compte de ces livraisons différées
+vous aide à écrire un logiciel prévisible
+
+33
+00:02:02.180 --> 00:02:06.730
+et stable. Comme un gestionnaire peut
+interrompre votre programme à n’importe quelle
+
+34
+00:02:06.780 --> 00:02:10.910
+milliseconde, vous devez suivre des règles
+strictes pour ne pas corrompre votre propre
+
+35
+00:02:10.960 --> 00:02:16.450
+mémoire. Dans un gestionnaire, vous ne pouvez utiliser
+que des fonctions sûres pour les signaux asynchrones,
+
+36
+00:02:16.500 --> 00:02:18.220
+comme l’appel système write.
+
+37
+00:02:18.320 --> 00:02:23.090
+Pas de printf. Si un signal arrive alors
+que le programme principal est en train
+
+38
+00:02:23.140 --> 00:02:27.410
+de remplir un tampon de printf, votre
+gestionnaire réentrera dans ce même tampon
+
+39
+00:02:27.460 --> 00:02:29.620
+et massacrera complètement la sortie.
+
+40
+00:02:29.980 --> 00:02:33.300
+Ce timing précis crée une
+condition de course classique.
+
+41
+00:02:33.760 --> 00:02:37.270
+Imaginez que votre programme teste une
+variable, voie qu’il doit attendre et appelle
+
+42
+00:02:37.320 --> 00:02:41.810
+pause. Si un signal tombe dans l’intervalle
+microscopique avant le sommeil, le gestionnaire s’exécute
+
+43
+00:02:41.860 --> 00:02:46.540
+trop tôt. Le processus dort alors pour
+toujours, en attendant un signal déjà reçu.
+
+44
+00:02:46.860 --> 00:02:48.920
+La solution est un ordre strict.
+
+45
+00:02:49.050 --> 00:02:53.730
+Vous bloquez d’abord le signal avec sigprocmask,
+testez votre condition en sécurité, puis
+
+46
+00:02:53.780 --> 00:02:58.350
+appelez sigsuspend. sigsuspend fonctionne parce
+qu’il remplace le masque et endort le processus
+
+47
+00:02:58.400 --> 00:03:01.400
+en une seule opération atomique.
+
+48
+00:03:01.560 --> 00:03:04.500
+Le noyau garantit qu’aucun signal
+ne passe entre les mailles.
+
+49
+00:03:04.860 --> 00:03:08.600
+Récapitulons. Quels deux signaux ne peuvent
+jamais être interceptés ni ignorés ?
+
+50
+00:03:09.040 --> 00:03:11.860
+Les réponses exactes
+sont SIGKILL et SIGSTOP.
+
+51
+00:03:12.080 --> 00:03:16.380
+Pourquoi utiliser sigsuspend au lieu de
+tester une variable puis de s’endormir ?
+
+52
+00:03:16.500 --> 00:03:20.660
+Pour éviter la condition de course où le
+signal arrive juste avant le sommeil.
+
+53
+00:03:21.060 --> 00:03:26.240
+Ouvrez maintenant l’animation A6.1 dans le
+cours en ligne et faites le laboratoire TD5.

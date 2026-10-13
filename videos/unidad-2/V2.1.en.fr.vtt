@@ -1,0 +1,306 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.430
+Quand vous exécutez un programme C simple sur une
+machine Linux, il fonctionne entièrement en mode
+
+2
+00:00:08.480 --> 00:00:13.510
+utilisateur, ou anneau 3. C’est un
+environnement isolé où le programme n’a aucun
+
+3
+00:00:13.560 --> 00:00:18.170
+pouvoir. Seul, il ne peut pas toucher
+le disque, ni lire le réseau, ni
+
+4
+00:00:18.220 --> 00:00:19.660
+écrire à l’écran.
+
+5
+00:00:20.040 --> 00:00:24.430
+Pour faire quelque chose d’utile, comme afficher
+un message, un programme doit atteindre
+
+6
+00:00:24.480 --> 00:00:29.490
+le matériel. Mais le noyau du système
+d’exploitation se tient sous cette frontière, dans
+
+7
+00:00:29.540 --> 00:00:32.480
+l’anneau 0, comme un
+garde-frontière intransigeant.
+
+8
+00:00:32.590 --> 00:00:36.350
+Si un programme tente de contourner la
+frontière de privilèges et d’accéder au matériel
+
+9
+00:00:36.400 --> 00:00:40.750
+directement, le processeur lève une
+exception et le noyau termine le
+
+10
+00:00:40.800 --> 00:00:45.950
+processus sur-le-champ. Puisque l’accès
+direct est bloqué, le programme doit
+
+11
+00:00:46.000 --> 00:00:48.860
+demander au noyau, en toute
+sécurité, d’agir à sa place.
+
+12
+00:00:49.260 --> 00:00:51.220
+Cette demande est un appel système.
+
+13
+00:00:51.560 --> 00:00:55.390
+Quand votre programme utilise la fonction
+write du C, il appelle en fait une enveloppe
+
+14
+00:00:55.440 --> 00:00:58.620
+de la bibliothèque C standard, glibc.
+
+15
+00:00:58.900 --> 00:01:02.850
+Sous cette enveloppe, il doit suivre une
+convention matérielle rigide pour franchir la
+
+16
+00:01:02.900 --> 00:01:06.990
+frontière. On la voit dans les
+instructions assembleur exactes
+
+17
+00:01:07.040 --> 00:01:10.220
+que le programme utilise
+pour préparer le passage.
+
+18
+00:01:10.540 --> 00:01:14.710
+Cette suite d’instructions est
+le protocole non négociable pour
+
+19
+00:01:14.760 --> 00:01:17.660
+franchir en sécurité la frontière
+de privilèges du système.
+
+20
+00:01:18.000 --> 00:01:22.190
+Avant de franchir, l’enveloppe glibc
+place les détails de la requête dans
+
+21
+00:01:22.240 --> 00:01:27.740
+des registres précis du CPU, selon la
+stricte convention de Linux sur x86-64.
+
+22
+00:01:27.920 --> 00:01:31.400
+D’abord, le numéro de l’appel
+va dans le registre RAX.
+
+23
+00:01:31.520 --> 00:01:35.400
+Ici, l’enveloppe utilise le numéro un
+pour désigner le bon appel système.
+
+24
+00:01:35.600 --> 00:01:40.160
+Les autres arguments vont
+dans RDI, RSI et RDX.
+
+25
+00:01:40.380 --> 00:01:42.350
+Remarquez un détail de sécurité essentiel.
+
+26
+00:01:42.400 --> 00:01:45.480
+Le texte lui-même ne voyage
+pas dans les registres.
+
+27
+00:01:45.700 --> 00:01:49.960
+Le registre RSI ne contient que
+l’adresse du texte en mémoire.
+
+28
+00:01:50.160 --> 00:01:54.100
+Le moment décisif arrive quand le
+programme exécute l’instruction syscall.
+
+29
+00:01:54.300 --> 00:02:00.300
+Elle force le CPU à passer instantanément
+en mode noyau, dans l’anneau 0.
+
+30
+00:02:00.780 --> 00:02:05.190
+L’exécution saute à une adresse
+fixe que le noyau a configurée au
+
+31
+00:02:05.240 --> 00:02:11.430
+démarrage : entry_SYSCALL_64. Le programme
+ne contrôle pas ce point d’arrivée.
+
+32
+00:02:11.480 --> 00:02:13.280
+Il ne peut pas choisir où il saute.
+
+33
+00:02:13.820 --> 00:02:18.100
+Une fois sous la frontière, le noyau
+prend le contrôle total de la requête.
+
+34
+00:02:18.440 --> 00:02:21.570
+Rappelez-vous : le noyau est le
+cœur du système d’exploitation.
+
+35
+00:02:21.620 --> 00:02:27.980
+Ce n’est pas un processus. Le noyau lit
+le registre RAX et s’en sert comme index.
+
+36
+00:02:28.160 --> 00:02:32.790
+Cette valeur, un, désigne une ligne de la
+table des appels système, qui déclenche le
+
+37
+00:02:32.840 --> 00:02:35.000
+bon gestionnaire : ksys_write.
+
+38
+00:02:35.460 --> 00:02:38.060
+Le noyau ne fait pas confiance
+aveuglément à la requête.
+
+39
+00:02:38.280 --> 00:02:41.360
+D’abord, le gestionnaire valide le
+descripteur de fichier et les arguments.
+
+40
+00:02:41.760 --> 00:02:47.010
+Puis le noyau utilise une fonction appelée
+copy_from_user pour récupérer en sécurité le texte
+
+41
+00:02:47.060 --> 00:02:50.120
+à l’adresse mémoire fournie par le
+programme, auquel il ne fait pas confiance.
+
+42
+00:02:50.500 --> 00:02:54.930
+En imposant une table rigide et
+en lisant lui-même la mémoire, le
+
+43
+00:02:54.980 --> 00:02:58.700
+noyau garantit qu’aucun code utilisateur
+malveillant ne peut le détourner.
+
+44
+00:02:59.060 --> 00:03:01.920
+Enfin, le pilote affiche
+le texte à l’écran.
+
+45
+00:03:02.520 --> 00:03:06.730
+Une fois la tâche matérielle accomplie,
+le voyage s’achève en rendant le contrôle
+
+46
+00:03:06.780 --> 00:03:11.450
+au programme. Le processeur exécute
+l’instruction sysret, qui abaisse les privilèges
+
+47
+00:03:11.500 --> 00:03:16.040
+du CPU et ramène l’exécution de l’autre
+côté de la frontière, en mode utilisateur.
+
+48
+00:03:16.220 --> 00:03:20.690
+Le résultat numérique de l’appel
+système revient dans le registre
+
+49
+00:03:20.740 --> 00:03:25.310
+RAX. Mais comment le programme sait-il si
+le noyau a rencontré un problème, comme un
+
+50
+00:03:25.360 --> 00:03:31.330
+mauvais descripteur de fichier ? Si RAX revient
+avec une valeur entre moins 4095 et moins
+
+51
+00:03:31.380 --> 00:03:35.760
+un, l’enveloppe glibc reconnaît
+cette plage comme une erreur.
+
+52
+00:03:36.000 --> 00:03:38.050
+L’enveloppe simplifie
+la vie du programmeur.
+
+53
+00:03:38.100 --> 00:03:42.890
+Elle remplace la valeur de retour par exactement
+moins un et range le vrai code d’erreur
+
+54
+00:03:42.940 --> 00:03:45.120
+dans une variable appelée errno.
+
+55
+00:03:45.280 --> 00:03:50.290
+Comme chaque appel système est un voyage
+complexe à travers une frontière gardée, il peut
+
+56
+00:03:50.340 --> 00:03:56.330
+échouer. C’est pourquoi les programmes du
+cours enveloppent chaque appel dans exit_if et
+
+57
+00:03:56.380 --> 00:04:00.600
+utilisent perror pour traduire
+errno en message lisible.
+
+58
+00:04:01.220 --> 00:04:06.570
+Récapitulons. Quelle instruction du CPU fait
+passer l’exécution du mode utilisateur au mode
+
+59
+00:04:06.620 --> 00:04:07.360
+noyau ?
+
+60
+00:04:10.040 --> 00:04:16.330
+L’instruction syscall. Le registre RSI
+contient-il le texte à afficher ou son
+
+61
+00:04:16.380 --> 00:04:17.460
+adresse mémoire ?
+
+62
+00:04:20.290 --> 00:04:22.170
+Il contient l’adresse mémoire.
+
+63
+00:04:22.410 --> 00:04:29.030
+Ouvrez maintenant l’animation A2.1 dans le cours en
+ligne et faites l’exercice un du laboratoire TD1.

@@ -1,0 +1,320 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.510
+Imagina que escrius dos programes, els
+executes alhora i els demanes que mirin
+
+2
+00:00:07.560 --> 00:00:09.480
+exactament la mateixa adreça de memòria.
+
+3
+00:00:09.680 --> 00:00:12.220
+Esperaries que hi trobessin
+exactament les mateixes dades.
+
+4
+00:00:12.380 --> 00:00:15.550
+Però en un sistema operatiu
+modern no és així.
+
+5
+00:00:15.600 --> 00:00:17.600
+Hi troben valors completament diferents.
+
+6
+00:00:18.140 --> 00:00:21.700
+Això passa per un engany
+fonamental del sistema operatiu.
+
+7
+00:00:22.240 --> 00:00:27.090
+En una màquina Linux x86-64, el
+sistema menteix a cada procés.
+
+8
+00:00:27.140 --> 00:00:32.010
+Dona a cada programa la il·lusió
+que s’executa sol, dins d’un enorme
+
+9
+00:00:32.060 --> 00:00:35.480
+espai d’adreces privat de 256 terabytes.
+
+10
+00:00:36.020 --> 00:00:40.390
+Aquesta sortida del terminal, del laboratori
+del curs, mostra com divideix un procés aquest
+
+11
+00:00:40.440 --> 00:00:45.570
+espai privat. Hi veiem zones diferents
+per al codi, les dades inicialitzades, el
+
+12
+00:00:45.620 --> 00:00:50.390
+munt per a les peticions petites de memòria,
+les regions mmap per a les grans i la pila per a
+
+13
+00:00:50.440 --> 00:00:53.790
+les variables locals. Però aquestes
+adreces són estrictament virtuals.
+
+14
+00:00:53.840 --> 00:00:57.680
+No apunten directament als xips de
+RAM física de la teva placa base.
+
+15
+00:00:58.680 --> 00:01:03.110
+Donant a cada programa el seu propi sistema
+de coordenades fictici, el nucli els aïlla
+
+16
+00:01:03.160 --> 00:01:08.250
+perfectament. Cap programa no pot sobreescriure per
+accident les dades d’un altre, perquè ni tan sols
+
+17
+00:01:08.300 --> 00:01:10.280
+parlen el mateix idioma físic.
+
+18
+00:01:10.860 --> 00:01:15.610
+Per salvar aquesta distància, la memòria virtual es
+divideix en trossos anomenats pàgines, d’exactament
+
+19
+00:01:15.660 --> 00:01:21.980
+4096 bytes cadascuna. La RAM física es
+divideix en marcs equivalents de 4096 bytes.
+
+20
+00:01:22.160 --> 00:01:26.210
+Una taula de pàgines del nucli, amb l’ajuda de
+la unitat de gestió de memòria del maquinari i
+
+21
+00:01:26.260 --> 00:01:31.280
+de la memòria cau TLB, dirigeix cada
+pàgina virtual a un marc físic concret.
+
+22
+00:01:31.700 --> 00:01:35.070
+Quan un programa fa servir una pàgina
+virtual que encara no té un marc físic
+
+23
+00:01:35.120 --> 00:01:37.700
+assignat, el maquinari atura el procés.
+
+24
+00:01:37.860 --> 00:01:41.580
+Provoca el que s’anomena una
+fallada de pàgina i salta al nucli.
+
+25
+00:01:42.000 --> 00:01:46.570
+El nucli agafa llavors un marc físic lliure,
+el posa a zero, actualitza la taula de pàgines
+
+26
+00:01:46.620 --> 00:01:48.040
+i torna a executar la instrucció.
+
+27
+00:01:48.340 --> 00:01:50.270
+Això s’anomena assignació mandrosa.
+
+28
+00:01:50.320 --> 00:01:54.390
+El sistema només gasta memòria física
+en el moment exacte en què el programa
+
+29
+00:01:54.440 --> 00:01:59.210
+la toca. Aquesta capa de traducció estricta, assistida
+pel maquinari, és el que fa funcionar tota la
+
+30
+00:01:59.260 --> 00:02:04.170
+il·lusió. Com que el nucli controla les
+traduccions, un procés queda físicament
+
+31
+00:02:04.220 --> 00:02:06.180
+atrapat dins de les seves pròpies pàgines.
+
+32
+00:02:06.760 --> 00:02:11.690
+Llavors, què passa amb aquest enorme
+espai d’adreces quan un procés necessita
+
+33
+00:02:11.740 --> 00:02:14.460
+clonar-se amb la crida al sistema fork?
+
+34
+00:02:15.040 --> 00:02:18.100
+Copiar físicament totes
+aquestes dades seria lentíssim.
+
+35
+00:02:18.570 --> 00:02:20.380
+Però mira aquesta sortida del laboratori.
+
+36
+00:02:20.920 --> 00:02:27.060
+Clonar un procés de 256 megabytes a la màquina
+del curs va trigar només 6,70 mil·lisegons.
+
+37
+00:02:27.340 --> 00:02:31.400
+Aquesta velocitat seria físicament
+impossible si la RAM es dupliqués de debò.
+
+38
+00:02:31.600 --> 00:02:35.020
+El sistema ho aconsegueix amb un
+truc anomenat còpia en escriptura.
+
+39
+00:02:35.380 --> 00:02:39.780
+En lloc de copiar la memòria real, el
+nucli només copia les taules de pàgines.
+
+40
+00:02:39.900 --> 00:02:45.060
+Fa que els dos processos apuntin als mateixos
+marcs físics i els marca com de només lectura.
+
+41
+00:02:45.200 --> 00:02:49.930
+Si un modifica les dades, el nucli intercepta
+l’escriptura, duplica aquella pàgina concreta
+
+42
+00:02:49.980 --> 00:02:53.860
+de 4096 bytes i deixa
+que el programa continuï.
+
+43
+00:02:54.060 --> 00:02:58.160
+Això costa només 2753
+nanosegons per fallada.
+
+44
+00:02:58.540 --> 00:03:02.850
+La còpia en escriptura converteix una duplicació
+massiva de memòria en una operació mandrosa,
+
+45
+00:03:02.900 --> 00:03:07.510
+sota demanda. Estalvia temps i RAM, i
+manté intacta la il·lusió de memòria
+
+46
+00:03:07.560 --> 00:03:11.790
+aïllada. Però una clonació tan absoluta
+té un efecte secundari curiós.
+
+47
+00:03:11.840 --> 00:03:16.650
+Si fas servir una funció com printf just
+abans de cridar fork, pots veure el teu text
+
+48
+00:03:16.700 --> 00:03:19.760
+imprès dues vegades a la pantalla,
+com en aquesta sortida del laboratori.
+
+49
+00:03:20.020 --> 00:03:22.740
+La biblioteca de C no escriu
+el text immediatament.
+
+50
+00:03:22.860 --> 00:03:27.220
+L’acumula en una memòria intermèdia interna,
+dins de la memòria del procés en mode usuari.
+
+51
+00:03:27.400 --> 00:03:32.050
+Quan s’executa fork, copia perfectament
+tot l’espai de memòria, inclosa aquella
+
+52
+00:03:32.100 --> 00:03:37.270
+memòria intermèdia sense buidar. Ara el pare
+i el fill tenen el mateix text pendent a la
+
+53
+00:03:37.320 --> 00:03:41.850
+memòria. Quan els dos processos acaben i criden
+la funció exit de la biblioteca, tots dos
+
+54
+00:03:41.900 --> 00:03:44.880
+buiden les seves memòries intermèdies a
+la pantalla i la línia surt dues vegades.
+
+55
+00:03:45.180 --> 00:03:48.910
+Si el pare hagués cridat en canvi
+la crida al sistema _exit, s’hauria
+
+56
+00:03:48.960 --> 00:03:51.240
+saltat el buidatge i
+hauria evitat el duplicat.
+
+57
+00:03:51.520 --> 00:03:54.600
+La dedicació del sistema
+a la il·lusió és absoluta.
+
+58
+00:03:54.780 --> 00:03:59.350
+El nucli s’assegura de clonar sense
+errors cada byte del procés, fins i tot
+
+59
+00:03:59.400 --> 00:04:02.120
+els seus errors a la memòria
+intermèdia. Repassem.
+
+60
+00:04:02.240 --> 00:04:07.380
+Pregunta u: per què fork és tan
+ràpid, fins i tot amb un procés gran?
+
+61
+00:04:07.800 --> 00:04:13.420
+Per la còpia en escriptura. Només copia les
+taules de pàgines, no la memòria física.
+
+62
+00:04:14.140 --> 00:04:19.360
+Pregunta dos: per què el text imprès pot
+aparèixer dues vegades després de cridar fork?
+
+63
+00:04:19.820 --> 00:04:25.030
+Perquè la memòria intermèdia de la biblioteca de
+C és dins de la memòria del procés, i fork copia
+
+64
+00:04:25.080 --> 00:04:27.020
+al fill la memòria
+intermèdia sense buidar.
+
+65
+00:04:27.380 --> 00:04:34.250
+Ara obre les animacions A4.1,
+A4.2 i A4.6 a l’aula i fes
+
+66
+00:04:34.300 --> 00:04:36.020
+el laboratori TD3.

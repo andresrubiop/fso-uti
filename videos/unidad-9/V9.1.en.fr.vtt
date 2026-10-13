@@ -1,0 +1,348 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.300
+Imaginez que vous demandez à un assistant d’IA
+de nettoyer le répertoire d’un ancien projet.
+
+2
+00:00:07.600 --> 00:00:09.340
+La demande paraît simple.
+
+3
+00:00:09.820 --> 00:00:14.150
+Mais quand cet assistant lance une commande
+de suppression sur vos fichiers, il oblige le
+
+4
+00:00:14.200 --> 00:00:16.800
+système d’exploitation à se
+poser une question cruciale.
+
+5
+00:00:17.180 --> 00:00:19.080
+Qui a réellement autorisé cela ?
+
+6
+00:00:19.660 --> 00:00:23.400
+Pour le système d’exploitation, un agent
+d’IA n’est qu’un processus de plus.
+
+7
+00:00:23.680 --> 00:00:27.990
+Il exécute un modèle de langage qui propose un
+appel d’outil précis, sous la forme d’un nom
+
+8
+00:00:28.040 --> 00:00:32.570
+et d’arguments, et s’appuie sur un programme
+associé pour l’exécuter réellement.
+
+9
+00:00:32.620 --> 00:00:35.040
+Cela crée une dangereuse
+faille de sécurité.
+
+10
+00:00:35.480 --> 00:00:40.020
+L’agent exécute des commandes au nom de l’utilisateur,
+mais il n’est pas l’utilisateur humain.
+
+11
+00:00:40.360 --> 00:00:43.720
+Ses décisions viennent d’un modèle
+statistique qui prédit du texte.
+
+12
+00:00:44.020 --> 00:00:48.230
+Ce modèle peut se tromper et halluciner,
+ou être activement manipulé par
+
+13
+00:00:48.280 --> 00:00:52.760
+des instructions cachées dans un document
+qu’il lit : c’est l’injection de prompt.
+
+14
+00:00:53.220 --> 00:00:57.390
+Comme les décisions de l’agent ne sont pas
+fiables par nature, sécuriser ses actions
+
+15
+00:00:57.440 --> 00:01:00.280
+est strictement un problème de
+sécurité du système d’exploitation.
+
+16
+00:01:00.560 --> 00:01:04.360
+Pour le noyau, cet agent est une
+énorme charge de travail matérielle.
+
+17
+00:01:04.720 --> 00:01:09.610
+Le système envoie les calculs d’inférence
+vers les GPU et NPU via le sous-système accel
+
+18
+00:01:09.660 --> 00:01:14.730
+de Linux. Avant même que le modèle puisse évaluer
+la demande de l’utilisateur, le système doit
+
+19
+00:01:14.780 --> 00:01:17.520
+charger en mémoire ses énormes
+poids, en lecture seule.
+
+20
+00:01:18.160 --> 00:01:21.000
+Linux s’en charge élégamment
+avec l’appel système mmap.
+
+21
+00:01:21.160 --> 00:01:24.570
+Il lit les poids directement depuis le cache
+de pages au moment où ils sont touchés,
+
+22
+00:01:24.620 --> 00:01:27.320
+sans avoir besoin de
+les copier en mémoire.
+
+23
+00:01:27.800 --> 00:01:32.980
+Pendant qu’il traite la conversation, le modèle
+stocke des clés et des valeurs dans un cache KV.
+
+24
+00:01:33.360 --> 00:01:37.390
+Cette empreinte mémoire grandit avec la
+longueur de la conversation, pour que le
+
+25
+00:01:37.440 --> 00:01:39.920
+système n’ait pas à
+recalculer les jetons passés.
+
+26
+00:01:40.440 --> 00:01:44.760
+Après ses calculs, le modèle finalise
+sa proposition de supprimer le dossier.
+
+27
+00:01:45.100 --> 00:01:47.980
+Le système d’exploitation doit maintenant
+intervenir pour l’intercepter.
+
+28
+00:01:48.380 --> 00:01:52.440
+L’architecture d’un système d’exploitation
+natif pour l’IA repose sur une règle absolue.
+
+29
+00:01:52.600 --> 00:01:55.820
+Le modèle propose, mais le
+système d’exploitation dispose.
+
+30
+00:01:56.140 --> 00:02:00.410
+Pour l’appliquer, le noyau doit
+traiter tout ce que produit le modèle
+
+31
+00:02:00.460 --> 00:02:03.300
+strictement comme du
+texte externe non fiable.
+
+32
+00:02:03.880 --> 00:02:07.540
+Windows place l’agent dans un
+espace de travail d’agent dédié.
+
+33
+00:02:07.900 --> 00:02:11.870
+L’agent travaille en parallèle de l’utilisateur
+humain, limité à son propre compte
+
+34
+00:02:11.920 --> 00:02:16.540
+séparé. Des conteneurs d’exécution
+Microsoft isolent les processus de l’agent.
+
+35
+00:02:16.940 --> 00:02:20.870
+Quand l’agent a besoin du système de fichiers,
+ses requêtes passent par des connecteurs
+
+36
+00:02:20.920 --> 00:02:24.900
+du Model Context Protocol, limités
+au moindre privilège possible.
+
+37
+00:02:24.960 --> 00:02:29.880
+Toute la philosophie de Windows repose
+sur une séparation physique et logique,
+
+38
+00:02:30.120 --> 00:02:34.940
+qui confine l’agent dans des espaces parallèles
+régis par des politiques déclaratives strictes.
+
+39
+00:02:35.420 --> 00:02:40.080
+Sous Linux x86-64, il n’y a pas
+d’agent unique pour tout le système.
+
+40
+00:02:40.280 --> 00:02:44.970
+Des distributions comme Ubuntu combinent plutôt
+des primitives fines du noyau pour construire un
+
+41
+00:02:45.020 --> 00:02:49.630
+environnement confiné. Le processus de l’agent tourne
+en mode utilisateur, au-dessus de la frontière
+
+42
+00:02:49.680 --> 00:02:54.350
+de privilèges du noyau. D’abord, les espaces de
+noms isolent la vue de l’agent et limitent ce qu’il
+
+43
+00:02:54.400 --> 00:02:59.680
+voit des montages et des utilisateurs. Ensuite, les
+cgroups plafonnent la consommation de CPU et de mémoire.
+
+44
+00:02:59.880 --> 00:03:04.300
+Enfin, les filtres seccomp empêchent les appels
+système non approuvés de franchir la frontière.
+
+45
+00:03:04.500 --> 00:03:08.430
+Avant même que l’agent tente d’exécuter
+son appel d’outil, Linux a déjà
+
+46
+00:03:08.480 --> 00:03:12.840
+sévèrement restreint son environnement, ses
+ressources matérielles et son accès au noyau.
+
+47
+00:03:13.300 --> 00:03:16.850
+Son environnement verrouillé, l’agent
+envoie sa demande de suppression du dossier
+
+48
+00:03:16.900 --> 00:03:20.920
+par un socket Unix à un démon
+d’arrière-plan comme agentd.
+
+49
+00:03:21.180 --> 00:03:24.720
+Le démon applique la première couche
+de défense : un analyseur strict.
+
+50
+00:03:24.860 --> 00:03:29.050
+Si la requête ne correspond pas exactement à un
+catalogue fermé d’appels d’outils autorisés,
+
+51
+00:03:29.100 --> 00:03:33.420
+elle est rejetée sur-le-champ. La deuxième
+couche est une politique stricte des chemins.
+
+52
+00:03:33.780 --> 00:03:37.950
+Le démon limite tous les chemins à l’espace
+de travail interne, résout les liens
+
+53
+00:03:38.000 --> 00:03:41.380
+symboliques et interdit les échappées
+relatives comme les deux points.
+
+54
+00:03:41.760 --> 00:03:46.070
+Comme supprimer des fichiers est une action
+destructrice, le démon déclenche la troisième couche
+
+55
+00:03:46.120 --> 00:03:49.320
+et suspend l’exécution pour exiger le
+consentement explicite de l’utilisateur.
+
+56
+00:03:49.660 --> 00:03:53.970
+Dans cette sortie du terminal, on voit
+le modèle émettre un appel d’outil,
+
+57
+00:03:54.020 --> 00:03:58.220
+la politique interne l’autoriser et
+le bac à sable prêt à l’appliquer.
+
+58
+00:03:58.280 --> 00:04:03.070
+Même si cette politique interne échoue, un
+bac à sable du noyau avec Landlock sert de
+
+59
+00:04:03.120 --> 00:04:07.600
+quatrième couche et dresse un mur infranchissable
+juste à la frontière de privilèges.
+
+60
+00:04:08.020 --> 00:04:10.740
+Enfin, la cinquième couche
+s’occupe de l’audit.
+
+61
+00:04:10.840 --> 00:04:16.570
+Chaque décision est consignée dans audit.log,
+avec l’option de socket SO_PEERCRED pour obtenir
+
+62
+00:04:16.620 --> 00:04:20.000
+le vrai UID et le vrai PID du
+client directement auprès du noyau.
+
+63
+00:04:20.080 --> 00:04:24.300
+Tout ce cycle illustre le principe
+de défense en profondeur.
+
+64
+00:04:24.480 --> 00:04:28.180
+Aucune couche de sécurité ne suppose
+que la précédente a bien fonctionné.
+
+65
+00:04:28.460 --> 00:04:30.000
+Terminons par un petit récapitulatif.
+
+66
+00:04:30.420 --> 00:04:34.050
+Question un : qu’est-ce qu’un agent
+d’IA pour le système d’exploitation ?
+
+67
+00:04:34.100 --> 00:04:38.770
+Réponse : un modèle de langage qui propose
+des appels d’outils, plus un programme qui les
+
+68
+00:04:38.820 --> 00:04:44.290
+exécute. Question deux : quel appel système charge
+les énormes poids en lecture seule du modèle sans
+
+69
+00:04:44.340 --> 00:04:47.680
+les copier ? Réponse :
+l’appel système mmap.
+
+70
+00:04:47.800 --> 00:04:54.680
+Ouvrez maintenant les animations A9.1 et A9.3 dans
+le cours en ligne et faites le laboratoire TD8.

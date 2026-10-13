@@ -1,0 +1,319 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:05.200
+Mira aquest muntatge senzill.
+
+2
+00:00:05.580 --> 00:00:09.610
+Tenim un procés normal que intenta
+llegir un fitxer amb exactament vuit
+
+3
+00:00:09.660 --> 00:00:11.880
+caràcters de dades, de la A a la H.
+
+4
+00:00:12.120 --> 00:00:17.030
+En la primera prova, el procés fa servir la
+crida open dues vegades sobre el mateix fitxer
+
+5
+00:00:17.080 --> 00:00:19.300
+i obté dos descriptors diferents.
+
+6
+00:00:19.600 --> 00:00:23.500
+Si llegim quatre bytes del
+primer descriptor, obtenim ABCD.
+
+7
+00:00:23.640 --> 00:00:27.710
+Si llegim quatre bytes del segon,
+obtenim exactament el mateix text.
+
+8
+00:00:27.760 --> 00:00:31.280
+La sortida final és ABCD, ABCD.
+
+9
+00:00:31.680 --> 00:00:34.500
+Ara canviem una sola línia de codi.
+
+10
+00:00:34.780 --> 00:00:39.010
+En lloc d’obrir el fitxer per segona
+vegada, fem servir la crida dup per
+
+11
+00:00:39.060 --> 00:00:40.720
+duplicar el primer descriptor.
+
+12
+00:00:40.980 --> 00:00:45.890
+La primera lectura continua donant ABCD,
+però la segona continua just on es va quedar
+
+13
+00:00:45.940 --> 00:00:48.640
+la primera i llegeix EFGH.
+
+14
+00:00:48.980 --> 00:00:52.080
+Ara la sortida final és ABCD, EFGH.
+
+15
+00:00:52.520 --> 00:00:56.700
+Per què canviar una sola crida al sistema
+altera del tot la lectura del fitxer?
+
+16
+00:00:56.920 --> 00:01:00.300
+Per respondre, cal mirar sota
+la frontera de privilegis.
+
+17
+00:01:00.680 --> 00:01:03.260
+Vegem l’arquitectura del sistema operatiu.
+
+18
+00:01:03.760 --> 00:01:07.180
+Sobre la frontera hi ha el mode
+usuari, on corre el nostre programa.
+
+19
+00:01:07.400 --> 00:01:11.130
+Sota la línia hi ha el mode nucli, on el
+nucli controla estrictament l’accés al
+
+20
+00:01:11.180 --> 00:01:15.900
+maquinari. Quan llegeixes un fitxer, el
+teu procés depèn de tres taules ocultes.
+
+21
+00:01:16.120 --> 00:01:18.120
+La primera és la taula de descriptors.
+
+22
+00:01:18.180 --> 00:01:21.860
+El nucli manté una taula de
+descriptors pròpia per a cada procés.
+
+23
+00:01:22.380 --> 00:01:24.960
+Després, la taula de fitxers
+oberts, comuna a tot el sistema.
+
+24
+00:01:25.100 --> 00:01:29.250
+Aquesta taula guarda el desplaçament actual:
+la posició exacta del byte on passarà la
+
+25
+00:01:29.300 --> 00:01:31.500
+lectura o escriptura següent.
+
+26
+00:01:31.960 --> 00:01:35.340
+Finalment, a baix de tot, hi ha
+la taula d’inodes en memòria.
+
+27
+00:01:35.460 --> 00:01:39.780
+És l’única representació activa de les
+metadades del fitxer, carregada a la RAM.
+
+28
+00:01:40.080 --> 00:01:44.650
+Quan un programa crida open dues vegades, el
+nucli crea dues entrades totalment separades
+
+29
+00:01:44.700 --> 00:01:49.210
+a la taula de fitxers oberts. Cada entrada
+té el seu propi desplaçament, que comença a
+
+30
+00:01:49.260 --> 00:01:53.240
+zero. Per això els dos descriptors
+llegeixen el principi del fitxer.
+
+31
+00:01:53.620 --> 00:01:55.700
+La crida dup funciona d’una altra manera.
+
+32
+00:01:55.860 --> 00:01:58.600
+Simplement copia el punter
+a la taula de descriptors.
+
+33
+00:01:58.820 --> 00:02:02.820
+Ara els dos descriptors apunten a la mateixa
+entrada de la taula de fitxers oberts.
+
+34
+00:02:03.040 --> 00:02:07.200
+Com que comparteixen una sola descripció de
+fitxer obert, comparteixen el desplaçament.
+
+35
+00:02:07.420 --> 00:02:10.980
+Quan una lectura avança la posició,
+l’altre descriptor veu el canvi.
+
+36
+00:02:11.120 --> 00:02:15.810
+És exactament el mecanisme que fa servir el teu
+shell quan redirigeix la sortida d’error i la
+
+37
+00:02:15.860 --> 00:02:18.000
+sortida estàndard a un
+únic fitxer de registre.
+
+38
+00:02:18.400 --> 00:02:22.550
+Fixa’t què passa amb aquesta estructura
+si un fitxer té inode però cap bloc
+
+39
+00:02:22.600 --> 00:02:26.520
+de dades al disc. És una
+FIFO, o canonada amb nom.
+
+40
+00:02:26.860 --> 00:02:31.910
+En lloc d’escriure en un disc, una FIFO fa passar
+les dades per una memòria intermèdia de 64 kilobytes
+
+41
+00:02:31.960 --> 00:02:35.320
+que és del tot a la memòria del nucli.
+
+42
+00:02:35.600 --> 00:02:39.630
+Com que aquesta canonada viu en memòria,
+imposa regles estrictes per mantenir les dades
+
+43
+00:02:39.680 --> 00:02:45.100
+sincronitzades. Si un procés crida open
+per llegir una FIFO, es bloca a propòsit.
+
+44
+00:02:45.320 --> 00:02:48.940
+El nucli el fa esperar fins que un altre
+procés obre la canonada per escriure.
+
+45
+00:02:49.360 --> 00:02:52.700
+Un cop feta la connexió,
+l’escriptura està molt regulada.
+
+46
+00:02:52.960 --> 00:02:57.540
+A Linux, tota escriptura de
+4096 bytes o menys és atòmica.
+
+47
+00:02:57.780 --> 00:03:01.870
+El nucli col·loca aquests blocs netament
+i garanteix que els missatges de diferents
+
+48
+00:03:01.920 --> 00:03:03.440
+escriptors no es barregin mai.
+
+49
+00:03:05.080 --> 00:03:09.330
+I quan l’últim escriptor tanca el seu
+descriptor, el lector rep simplement un zero,
+
+50
+00:03:09.380 --> 00:03:11.260
+que indica el final del fitxer.
+
+51
+00:03:11.660 --> 00:03:16.390
+El nucli gestiona la complexa comunicació entre
+processos amb la mateixa arquitectura de tres
+
+52
+00:03:16.440 --> 00:03:19.880
+taules, fins i tot quan no hi ha cap disc.
+
+53
+00:03:20.260 --> 00:03:22.720
+Posem a prova aquestes
+regles amb un cas pràctic.
+
+54
+00:03:23.020 --> 00:03:27.730
+Què passa si creem una FIFO en una carpeta
+compartida per xarxa i intentem fer-la servir com a
+
+55
+00:03:27.780 --> 00:03:30.220
+canonada de xat entre
+dos portàtils diferents?
+
+56
+00:03:30.420 --> 00:03:35.050
+La connexió falla. Una carpeta compartida
+per xarxa només difon el nom del fitxer
+
+57
+00:03:35.100 --> 00:03:38.800
+a les altres màquines. No pot compartir
+la memòria del nucli que hi ha a sota.
+
+58
+00:03:39.100 --> 00:03:43.430
+Quan cada portàtil obre aquest camí de
+xarxa, el seu sistema operatiu local crea
+
+59
+00:03:43.480 --> 00:03:46.440
+la seva pròpia memòria intermèdia
+aïllada de 64 kilobytes.
+
+60
+00:03:46.700 --> 00:03:48.880
+Les dues màquines no
+arriben mai a connectar-se.
+
+61
+00:03:49.140 --> 00:03:54.150
+Un fitxer és un objecte viu, gestionat de
+manera activa i exclusiva dins dels límits del
+
+62
+00:03:54.200 --> 00:03:56.620
+nucli d’una màquina local. Repassem.
+
+63
+00:03:56.880 --> 00:04:01.210
+Quan un procés crida dup, quina entrada del
+nucli es comparteix per mantenir el desplaçament
+
+64
+00:04:01.260 --> 00:04:07.430
+sincronitzat? La descripció de fitxer obert.
+Per què una FIFO no pot connectar dos
+
+65
+00:04:07.480 --> 00:04:09.960
+ordinadors a través d’una
+unitat de xarxa compartida?
+
+66
+00:04:10.340 --> 00:04:15.480
+Perquè la canonada existeix del tot al
+nucli de la màquina local, no al disc.
+
+67
+00:04:15.980 --> 00:04:23.020
+Ara obre les animacions A3.2 i A3.3
+a l’aula i fes el laboratori TD2.

@@ -1,0 +1,277 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.400
+Nous avons 32 processus qui tournent
+en même temps en mode utilisateur.
+
+2
+00:00:07.580 --> 00:00:12.480
+Ils ont une tâche simple : inscrire leur
+identifiant de processus dans un compteur partagé.
+
+3
+00:00:12.920 --> 00:00:16.360
+Si tout se passe comme
+prévu, le calcul est simple.
+
+4
+00:00:16.680 --> 00:00:20.380
+Le compteur devrait monter tranquillement
+et s’arrêter exactement à 32.
+
+5
+00:00:20.860 --> 00:00:25.390
+Mais dans cette sortie du terminal du
+programme shm_race, on voit une autre
+
+6
+00:00:25.440 --> 00:00:31.470
+réalité. Les résultats sont totalement
+imprévisibles : des totaux comme 19, 28 ou
+
+7
+00:00:31.520 --> 00:00:34.560
+25. Les programmes ne plantent pas.
+
+8
+00:00:34.800 --> 00:00:38.960
+En fait, les inscriptions disparaissent
+en silence pendant l’exécution.
+
+9
+00:00:39.600 --> 00:00:42.420
+Ces processus communiquent
+par mémoire partagée.
+
+10
+00:00:42.540 --> 00:00:46.190
+Ils écrivent directement dans le même espace,
+ce qui, comme le prouvent ces inscriptions
+
+11
+00:00:46.240 --> 00:00:48.760
+perdues, est très dangereux.
+
+12
+00:00:49.200 --> 00:00:53.310
+Pour résoudre le mystère, il faut d’abord
+voir comment les processus contournent
+
+13
+00:00:53.360 --> 00:00:56.680
+leur propre isolation pour
+partager de la mémoire.
+
+14
+00:00:56.980 --> 00:01:01.650
+Normalement, le système garde les
+processus totalement isolés, séparés du
+
+15
+00:01:01.700 --> 00:01:03.540
+noyau par la frontière de privilèges.
+
+16
+00:01:03.780 --> 00:01:08.130
+On peut percer cette isolation avec un
+appel système nommé mmap et l’option
+
+17
+00:01:08.180 --> 00:01:13.190
+MAP_SHARED. Deux processus peuvent ainsi projeter
+un fichier commun, leurs pages virtuelles pointant
+
+18
+00:01:13.240 --> 00:01:15.500
+vers le même cadre physique.
+
+19
+00:01:15.720 --> 00:01:20.310
+Le noyau gère cette mémoire physique selon des
+règles géographiques strictes : il l’alloue
+
+20
+00:01:20.360 --> 00:01:23.500
+par pages entières de
+exactement 4096 octets.
+
+21
+00:01:23.740 --> 00:01:27.290
+Cette sortie du programme
+mmap_limits révèle la première règle.
+
+22
+00:01:27.340 --> 00:01:31.570
+Si un processus touche une page située
+entièrement au-delà de la fin du fichier,
+
+23
+00:01:31.620 --> 00:01:33.180
+il n’y a aucune donnée à charger.
+
+24
+00:01:33.240 --> 00:01:35.980
+Le noyau intervient et
+envoie le signal SIGBUS.
+
+25
+00:01:36.240 --> 00:01:38.020
+Il y a une deuxième limite.
+
+26
+00:01:38.260 --> 00:01:42.370
+Si un processus essaie d’écrire dans
+une zone projetée en lecture seule,
+
+27
+00:01:42.420 --> 00:01:45.480
+le noyau intervient de nouveau
+en envoyant le signal SIGSEGV.
+
+28
+00:01:45.900 --> 00:01:50.470
+Ainsi, même si mmap crée bien un espace
+ouvert pour les données, le noyau reste
+
+29
+00:01:50.520 --> 00:01:53.400
+un garde-frontière strict qui fait
+respecter limites et permissions.
+
+30
+00:01:53.560 --> 00:01:56.670
+Il existe une autre façon de partager
+des données, sans fichier derrière.
+
+31
+00:01:56.720 --> 00:02:02.290
+On peut utiliser la mémoire partagée System
+V, avec shmget et shmat, pour créer un
+
+32
+00:02:02.340 --> 00:02:06.990
+bloc de mémoire autonome. Le trait
+distinctif de cette mémoire System V est sa
+
+33
+00:02:07.040 --> 00:02:11.570
+persistance. Le segment survit
+aux processus qui l’ont créé.
+
+34
+00:02:11.620 --> 00:02:16.860
+Il reste dans le système avec ses données jusqu’à
+ce qu’un processus le détruise explicitement.
+
+35
+00:02:16.920 --> 00:02:22.180
+Que l’on projette un fichier ou que l’on utilise System
+V, on obtient un espace mémoire extrêmement rapide.
+
+36
+00:02:22.360 --> 00:02:27.840
+Mais cet accès brut et sans protection est
+exactement ce qui a fait échouer nos 32 processus.
+
+37
+00:02:28.180 --> 00:02:32.880
+Reprenons nos 32 processus et plaçons-les
+autour du nouveau bloc de mémoire partagée.
+
+38
+00:02:33.240 --> 00:02:37.370
+Comme la mémoire partagée fonctionne entièrement en
+mode utilisateur, la communication ne passe jamais
+
+39
+00:02:37.420 --> 00:02:41.120
+par le noyau. Il n’y a pas d’arbitre
+pour synchroniser leurs actions.
+
+40
+00:02:41.420 --> 00:02:45.460
+L’échec se produit lors d’une opération
+très simple : incrémenter le compteur.
+
+41
+00:02:45.660 --> 00:02:48.540
+À la vitesse du processeur, cela
+ressemble à une seule action.
+
+42
+00:02:48.640 --> 00:02:52.210
+Mais au ralenti, on voit qu’il s’agit
+en réalité de trois étapes distinctes.
+
+43
+00:02:52.260 --> 00:02:55.620
+Lire la valeur, ajouter
+un, et la réécrire.
+
+44
+00:02:55.940 --> 00:03:00.210
+Sans arbitre dans le noyau, deux processus
+distincts peuvent faire la lecture dans
+
+45
+00:03:00.260 --> 00:03:01.940
+exactement la même fraction de seconde.
+
+46
+00:03:02.020 --> 00:03:06.960
+Tous deux lisent un, tous deux ajoutent un et
+tous deux écrivent deux en mémoire partagée.
+
+47
+00:03:07.100 --> 00:03:10.400
+Deux processus ont travaillé, mais
+le compteur n’a augmenté que de un.
+
+48
+00:03:10.720 --> 00:03:13.340
+Cette collision mécanique
+est une condition de course.
+
+49
+00:03:13.560 --> 00:03:17.410
+C’est pour cela que les inscriptions de nos
+processus se sont écrasées en silence et
+
+50
+00:03:17.460 --> 00:03:21.210
+ont disparu. La mémoire partagée
+offre une vitesse brute inégalée.
+
+51
+00:03:21.260 --> 00:03:25.490
+Mais pour l’utiliser en sécurité, nous devons
+construire notre propre synchronisation : c’est le
+
+52
+00:03:25.540 --> 00:03:28.060
+défi de l’unité 7. Récapitulons.
+
+53
+00:03:28.380 --> 00:03:32.870
+Si un processus écrit dans une page située entièrement
+au-delà de la fin d’un fichier projeté, quel
+
+54
+00:03:32.920 --> 00:03:34.420
+signal le noyau envoie-t-il ?
+
+55
+00:03:34.820 --> 00:03:39.930
+SIGBUS. Suivante. Pourquoi la mémoire partagée System
+V reste-t-elle dans le système quand le programme
+
+56
+00:03:39.980 --> 00:03:44.670
+se termine ? Parce que le segment survit aux
+processus jusqu’à ce que quelqu’un le détruise
+
+57
+00:03:44.720 --> 00:03:51.920
+explicitement. Ouvrez les animations A6.2 et A6.3
+dans le cours en ligne et faites le laboratoire TD5.
