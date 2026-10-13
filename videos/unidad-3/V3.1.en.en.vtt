@@ -1,0 +1,245 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.240
+In Linux, there is a unifying design
+philosophy—everything is a file.
+
+2
+00:00:08.700 --> 00:00:13.330
+The operating system uses the exact same
+interface, whether it is handling a regular
+
+3
+00:00:13.380 --> 00:00:20.360
+file, a directory, character and block
+devices, a pipe, a FIFO, or a network socket.
+
+4
+00:00:20.960 --> 00:00:25.790
+As users, we interact with all these
+elements using familiar, human-readable text
+
+5
+00:00:25.840 --> 00:00:31.630
+names, like notas.txt. But if you look
+inside the core metadata structure of any
+
+6
+00:00:31.680 --> 00:00:37.310
+file, the inode, you will notice a surprising
+omission—the file's name is completely
+
+7
+00:00:37.360 --> 00:00:42.470
+absent. If the file itself does not contain
+its own name, where exactly does that
+
+8
+00:00:42.520 --> 00:00:47.230
+text live? And how does the kernel actually
+find the physical data on the disk when
+
+9
+00:00:47.280 --> 00:00:52.750
+you ask for it? To the kernel, a file's
+true identity is its inode, which is
+
+10
+00:00:52.800 --> 00:00:55.140
+recognized strictly by a unique number.
+
+11
+00:00:55.660 --> 00:00:59.900
+Unix systems deliberately separate
+a file's content from its metadata.
+
+12
+00:01:00.780 --> 00:01:05.680
+Inside this inode structure, the kernel
+stores the file type, access permissions,
+
+13
+00:01:05.820 --> 00:01:12.020
+owner, total size, and four specific
+timestamps—access, modify, change, and birth.
+
+14
+00:01:12.580 --> 00:01:15.080
+Notice that there is no
+field dedicated to a name.
+
+15
+00:01:15.520 --> 00:01:20.290
+The inode also holds extents—these are
+pointers that tell the file system exactly
+
+16
+00:01:20.340 --> 00:01:25.210
+where the contiguous runs of 4-kilobyte
+data blocks live on the physical ext4 disk
+
+17
+00:01:25.260 --> 00:01:29.820
+partition. The missing name
+actually lives inside a directory.
+
+18
+00:01:30.040 --> 00:01:34.290
+A directory is simply another file, but
+its data is formatted as a list of text
+
+19
+00:01:34.340 --> 00:01:37.180
+names paired with their
+corresponding inode numbers.
+
+20
+00:01:37.360 --> 00:01:42.310
+It also includes an entry for itself,
+denoted by a dot, and its parent, denoted by
+
+21
+00:01:42.360 --> 00:01:47.230
+two dots. A directory acts purely as a
+map—it translates human-friendly text
+
+22
+00:01:47.280 --> 00:01:51.310
+strings into the numerical inode identifiers
+that the kernel requires to fetch your
+
+23
+00:01:51.360 --> 00:01:56.370
+data. Let us trace the exact steps the
+kernel takes to resolve an absolute path,
+
+24
+00:01:56.420 --> 00:01:59.760
+like /home/student/notas.txt.
+
+25
+00:02:00.360 --> 00:02:02.590
+The process begins at the root inode.
+
+26
+00:02:02.640 --> 00:02:06.830
+The kernel reads this directory's table,
+scans the text entries, and looks up the
+
+27
+00:02:06.880 --> 00:02:09.160
+target inode number for the string home.
+
+28
+00:02:10.200 --> 00:02:15.090
+It then moves to the home inode, reads
+its directory table, and locates the entry
+
+29
+00:02:15.140 --> 00:02:20.460
+for student. Entering the student inode,
+the kernel reads one final table.
+
+30
+00:02:20.680 --> 00:02:25.740
+Here it finds notas.txt, and
+extracts the target inode number.
+
+31
+00:02:26.120 --> 00:02:30.670
+This component-by-component traversal is
+the mandatory bridge connecting the user
+
+32
+00:02:30.720 --> 00:02:34.740
+space abstraction of a path to
+the physical reality of the disk.
+
+33
+00:02:35.100 --> 00:02:39.370
+Because the name is completely detached
+from the physical file data, a single file
+
+34
+00:02:39.420 --> 00:02:41.680
+can have multiple independent names.
+
+35
+00:02:41.840 --> 00:02:47.420
+This is a hard link—a new directory entry
+pointing directly to the exact same inode.
+
+36
+00:02:47.500 --> 00:02:52.460
+The inode tracks how many names point
+to it using the st_nlink counter.
+
+37
+00:02:52.600 --> 00:02:56.750
+The kernel only frees the data blocks when
+this drops to zero, and no process has
+
+38
+00:02:56.800 --> 00:02:59.960
+the file open. A symbolic
+link operates differently.
+
+39
+00:03:00.300 --> 00:03:04.730
+As we see in this terminal output, a
+symbolic link is a completely new inode.
+
+40
+00:03:04.780 --> 00:03:10.070
+The output shows atajo has
+a distinct inode number,
+
+41
+00:03:10.120 --> 00:03:16.240
+12190687, separate from the
+original file's 12190686.
+
+42
+00:03:16.960 --> 00:03:20.500
+Its data content is just a text
+path pointing to another location.
+
+43
+00:03:21.140 --> 00:03:25.750
+The Linux file system operates not as a
+rigid set of folders, but as a flexible web
+
+44
+00:03:25.800 --> 00:03:29.840
+of pointers linking human-readable
+names to physical identities.
+
+45
+00:03:30.320 --> 00:03:33.620
+Let's review. Does an inode
+contain the file's name?
+
+46
+00:03:35.700 --> 00:03:39.500
+No, the name lives in the directory
+entry, which points to the inode.
+
+47
+00:03:39.920 --> 00:03:43.000
+What is the difference between
+a hard link and a symbolic link?
+
+48
+00:03:45.120 --> 00:03:49.650
+A hard link points directly to the same
+inode, whereas a symbolic link is a separate
+
+49
+00:03:49.700 --> 00:03:51.330
+inode whose content is a path.
+
+50
+00:03:51.380 --> 00:03:57.040
+Now open animation A3.1 in the
+course hub, and run lab TD2.

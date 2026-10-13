@@ -1,0 +1,304 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.550
+A network server faces a
+constant balancing act.
+
+2
+00:00:06.600 --> 00:00:10.930
+It has to handle incoming data from hundreds
+of connections at the same time without
+
+3
+00:00:10.980 --> 00:00:14.080
+letting a slow client
+bottleneck the entire system.
+
+4
+00:00:14.500 --> 00:00:17.040
+We can measure this problem in lab TD7.
+
+5
+00:00:17.380 --> 00:00:20.480
+We send 32 clients to
+a web server at once.
+
+6
+00:00:21.000 --> 00:00:25.430
+24 of them send the requests instantly,
+but eight of them are intentionally slow,
+
+7
+00:00:25.480 --> 00:00:27.980
+taking a full second to
+transmit their data.
+
+8
+00:00:28.420 --> 00:00:30.760
+We start with an iterative server model.
+
+9
+00:00:30.840 --> 00:00:35.920
+This setup runs on a single thread and
+processes exactly one connection at a time.
+
+10
+00:00:36.160 --> 00:00:39.990
+While the server is busy with the first
+client, the other 31 connections complete
+
+11
+00:00:40.040 --> 00:00:41.340
+their three-way handshake.
+
+12
+00:00:41.620 --> 00:00:45.510
+The kernel marks their connection as
+established, but they are trapped waiting in
+
+13
+00:00:45.560 --> 00:00:47.620
+the listening socket's accept queue.
+
+14
+00:00:48.000 --> 00:00:50.780
+This terminal output shows
+the results of that delay.
+
+15
+00:00:51.040 --> 00:00:56.450
+Our fast clients wait a median time of
+982 milliseconds just to get a response,
+
+16
+00:00:56.500 --> 00:00:58.900
+simply because they are
+stuck behind the slow ones.
+
+17
+00:00:59.100 --> 00:01:03.600
+In an iterative model, the server can
+only move as fast as its slowest client.
+
+18
+00:01:03.780 --> 00:01:08.640
+The CPU sits idle while waiting for network
+data, wasting valuable processing power.
+
+19
+00:01:09.140 --> 00:01:13.250
+To clear out that queue, the server can
+create a new process for every connection by
+
+20
+00:01:13.300 --> 00:01:15.600
+calling fork right after accept.
+
+21
+00:01:15.840 --> 00:01:17.500
+This isolates the workload.
+
+22
+00:01:17.680 --> 00:01:21.810
+The new child process serves the client,
+which frees the parent process to instantly
+
+23
+00:01:21.860 --> 00:01:24.080
+loop back and accept the next arrival.
+
+24
+00:01:24.380 --> 00:01:26.520
+But this creates administrative overhead.
+
+25
+00:01:26.660 --> 00:01:31.010
+The server needs a SIGCHLD handler to
+reap child processes when they finish,
+
+26
+00:01:31.060 --> 00:01:33.700
+preventing them from becoming
+resource-draining zombies.
+
+27
+00:01:34.320 --> 00:01:38.790
+Process isolation keeps fast clients moving,
+but creating a whole new process costs
+
+28
+00:01:38.840 --> 00:01:42.180
+several times more system
+memory than creating a thread.
+
+29
+00:01:42.520 --> 00:01:45.940
+We can swap the child process
+for a new thread per connection.
+
+30
+00:01:46.080 --> 00:01:49.640
+This is cheaper to create and
+takes advantage of shared memory.
+
+31
+00:01:49.920 --> 00:01:52.800
+However, this approach hits
+a hard physical limit.
+
+32
+00:01:52.940 --> 00:01:57.510
+If a server gets 10,000 concurrent
+connections, it has to maintain 10,000 threads
+
+33
+00:01:57.560 --> 00:02:00.760
+and their memory stacks, which
+quickly exhausts the machine.
+
+34
+00:02:01.080 --> 00:02:04.380
+A thread pool offers a compromise
+for bounded resources.
+
+35
+00:02:04.660 --> 00:02:07.580
+The server creates a fixed
+number of threads at startup.
+
+36
+00:02:07.880 --> 00:02:11.700
+These threads act as consumers, pulling
+active connections from a shared queue.
+
+37
+00:02:12.020 --> 00:02:15.910
+Let's run our eight slow clients into
+a bounded pool containing exactly eight
+
+38
+00:02:15.960 --> 00:02:20.060
+threads. The slow clients grab
+all available threads at once.
+
+39
+00:02:20.340 --> 00:02:24.250
+Because they take a full second to finish
+their requests, the pool reaches total
+
+40
+00:02:24.300 --> 00:02:28.720
+saturation. The 24 fast clients are
+completely blocked from entering.
+
+41
+00:02:29.180 --> 00:02:32.610
+Looking at the terminal output for the pool
+model, we see the fast clients are once
+
+42
+00:02:32.660 --> 00:02:38.610
+again trapped. Their median wait time spikes
+to 981 milliseconds, entirely defeating
+
+43
+00:02:38.660 --> 00:02:40.780
+the speed advantage of multi-threading.
+
+44
+00:02:41.120 --> 00:02:44.730
+Thread pools keep a server from running out
+of memory, but they fail when the number
+
+45
+00:02:44.780 --> 00:02:47.320
+of slow clients matches
+the size of the pool.
+
+46
+00:02:47.640 --> 00:02:51.680
+A robust server needs an architecture
+that never blocks on a slow client.
+
+47
+00:02:51.820 --> 00:02:54.220
+Without spawning endless
+threads to compensate.
+
+48
+00:02:54.820 --> 00:02:56.760
+The solution is the event loop.
+
+49
+00:02:57.300 --> 00:03:01.110
+One efficient thread handles all clients
+by interacting only with actively
+
+50
+00:03:01.160 --> 00:03:06.170
+transmitting sockets. Using the epoll_wait
+system call, the thread asks the kernel
+
+51
+00:03:06.220 --> 00:03:09.440
+which sockets have data,
+jumping exclusively to those.
+
+52
+00:03:09.660 --> 00:03:14.030
+By ignoring inactive connections, the thread
+never wastes a millisecond waiting for
+
+53
+00:03:14.080 --> 00:03:16.660
+a slow client to finish
+formulating its request.
+
+54
+00:03:17.020 --> 00:03:20.040
+This final block of terminal
+output proves the efficiency.
+
+55
+00:03:20.320 --> 00:03:25.170
+Under the exact same load, the event loop
+processes the 24 fast clients in just one
+
+56
+00:03:25.220 --> 00:03:28.940
+to two milliseconds, completely
+unaffected by the eight slow clients.
+
+57
+00:03:29.240 --> 00:03:31.920
+The event loop solves the C10K problem.
+
+58
+00:03:32.120 --> 00:03:35.360
+It enables massive concurrency
+with minimal system overhead.
+
+59
+00:03:35.820 --> 00:03:40.200
+Let's review. What happens to a new
+connection if an iterative server is busy?
+
+60
+00:03:40.380 --> 00:03:42.280
+It waits in the socket's accept queue.
+
+61
+00:03:42.620 --> 00:03:45.140
+Why does a thread pool
+struggle with slow clients?
+
+62
+00:03:45.300 --> 00:03:50.860
+If slow clients match the number of
+threads, the pool completely saturates.
+
+63
+00:03:51.340 --> 00:03:58.360
+Now open animation A8.2, server models,
+in the course hub and run lab TD7.

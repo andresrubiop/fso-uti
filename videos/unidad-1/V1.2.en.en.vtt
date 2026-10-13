@@ -1,0 +1,296 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.190
+Every single second, your machine
+processes massive streams of data.
+
+2
+00:00:08.240 --> 00:00:11.860
+Without skipping a beat,
+everything seems perfectly stable.
+
+3
+00:00:12.480 --> 00:00:15.260
+But then, a software failure strikes.
+
+4
+00:00:15.640 --> 00:00:19.600
+A simple disk driver tries to access
+a memory address it shouldn't.
+
+5
+00:00:20.000 --> 00:00:23.680
+In some systems, this
+single error cascades.
+
+6
+00:00:23.880 --> 00:00:27.760
+The entire machine freezes and
+your only option is a hard reboot.
+
+7
+00:00:28.140 --> 00:00:32.290
+In other systems, that same faulty
+driver is instantly isolated.
+
+8
+00:00:32.340 --> 00:00:36.850
+It quietly restarts in the background, and
+the machine keeps running as if nothing
+
+9
+00:00:36.900 --> 00:00:40.660
+happened. The difference comes
+down to the privilege boundary.
+
+10
+00:00:41.000 --> 00:00:45.410
+This is the strict line separating user
+mode at the top from kernel mode at the
+
+11
+00:00:45.460 --> 00:00:50.550
+bottom. Whether an operating system survives
+a crash depends entirely on how much of
+
+12
+00:00:50.600 --> 00:00:54.160
+its software is allowed to cross
+that boundary into kernel mode.
+
+13
+00:00:54.500 --> 00:00:58.890
+First, we have the monolithic
+architecture, used by Linux and the BSDs.
+
+14
+00:00:59.350 --> 00:01:03.860
+Here, every core service, the scheduler,
+memory management, file systems, and
+
+15
+00:01:03.910 --> 00:01:06.490
+drivers, is packed into kernel mode.
+
+16
+00:01:06.870 --> 00:01:09.190
+This design is exceptionally fast.
+
+17
+00:01:09.410 --> 00:01:13.640
+An application only needs one system
+call, meaning just one crossing in and one
+
+18
+00:01:13.690 --> 00:01:18.800
+crossing out. But because everything shares
+kernel mode, a bug in a single driver
+
+19
+00:01:18.850 --> 00:01:22.650
+can corrupt the shared memory space
+and bring the entire system down.
+
+20
+00:01:23.350 --> 00:01:25.800
+Linux is monolithic, but it is modular.
+
+21
+00:01:25.850 --> 00:01:31.480
+This command output from the course
+machine shows 258 loaded modules, which are
+
+22
+00:01:31.530 --> 00:01:34.250
+drivers the system can
+add or remove on the fly.
+
+23
+00:01:34.690 --> 00:01:40.450
+Then we have the microkernel, used by
+systems like seL4, QNX, and MINIX 3.
+
+24
+00:01:40.750 --> 00:01:46.150
+This design moves most services, like file
+systems and drivers, up into user mode.
+
+25
+00:01:46.430 --> 00:01:49.410
+Only the bare minimum stays
+below the privilege boundary.
+
+26
+00:01:49.570 --> 00:01:51.490
+This provides strict isolation.
+
+27
+00:01:51.710 --> 00:01:54.880
+If a driver fails in user mode,
+the system simply restarts it.
+
+28
+00:01:54.930 --> 00:01:57.290
+The kernel itself is never touched.
+
+29
+00:01:57.630 --> 00:01:59.250
+The trade-off is performance.
+
+30
+00:01:59.910 --> 00:02:02.960
+Operations now require many more messages
+and boundary crossings to get the same
+
+31
+00:02:03.010 --> 00:02:08.190
+work done. There is also a hybrid
+approach, used by Windows NT and macOS.
+
+32
+00:02:08.610 --> 00:02:13.500
+This is a compromise, keeping most services
+in kernel mode, but moving some to user
+
+33
+00:02:13.550 --> 00:02:16.710
+space, inheriting both
+benefits and problems.
+
+34
+00:02:17.370 --> 00:02:21.540
+Designing what runs in kernel mode is a
+strict engineering choice, between raw
+
+35
+00:02:21.590 --> 00:02:24.410
+execution speed and isolated resilience.
+
+36
+00:02:24.990 --> 00:02:30.200
+So how exactly do these complex kernel
+architectures actually load into memory from
+
+37
+00:02:30.250 --> 00:02:32.770
+a completely powered off, dark state?
+
+38
+00:02:33.250 --> 00:02:35.050
+It happens in four stages.
+
+39
+00:02:35.570 --> 00:02:37.880
+First is the UEFI firmware.
+
+40
+00:02:37.930 --> 00:02:42.320
+It tests the hardware, initializes the
+memory and buses, and checks its non
+
+41
+00:02:42.370 --> 00:02:44.330
+-volatile memory for boot instructions.
+
+42
+00:02:44.690 --> 00:02:48.380
+Next is the bootloader,
+like GRUB or systemd-boot.
+
+43
+00:02:48.430 --> 00:02:54.350
+It takes the kernel, named vmlinuz, and
+an initial file system called initramfs,
+
+44
+00:02:54.430 --> 00:02:55.930
+and loads them into memory.
+
+45
+00:02:56.510 --> 00:03:01.200
+Stage 3 is the kernel. It decompresses,
+sets up virtual memory, detects the
+
+46
+00:03:01.250 --> 00:03:05.250
+processors, and launches the
+very first process, PID 1.
+
+47
+00:03:05.750 --> 00:03:11.300
+Finally, user space. The systemd process,
+running as PID 1, starts all the
+
+48
+00:03:11.350 --> 00:03:14.890
+remaining services in parallel
+until you reach the login prompt.
+
+49
+00:03:15.070 --> 00:03:17.440
+Every other process descends
+from this single node.
+
+50
+00:03:17.490 --> 00:03:22.000
+We can measure exactly how long this
+entire boot process takes on the course
+
+51
+00:03:22.050 --> 00:03:25.170
+machine, using the
+systemd-analyze command.
+
+52
+00:03:25.390 --> 00:03:27.330
+This chart shows the time breakdown.
+
+53
+00:03:27.610 --> 00:03:33.340
+The firmware took 9.1 seconds, the loader
+took 4.9 seconds, and user space took 14.5
+
+54
+00:03:33.390 --> 00:03:37.570
+seconds. The kernel stage
+only took 2.6 seconds.
+
+55
+00:03:37.990 --> 00:03:42.210
+Despite being the most complex and critical
+component of the entire architecture,
+
+56
+00:03:42.490 --> 00:03:45.440
+loading the kernel is actually the
+fastest stage of the boot sequence.
+
+57
+00:03:45.490 --> 00:03:50.280
+An operating system's resilience is defined
+by its architecture, and bringing it to
+
+58
+00:03:50.330 --> 00:03:54.310
+life requires a precise,
+4-step sequential handoff.
+
+59
+00:03:54.950 --> 00:03:59.380
+Let's review. In which kernel architecture
+does a failing driver crash the whole
+
+60
+00:03:59.430 --> 00:04:02.470
+system? The monolithic architecture.
+
+61
+00:04:03.110 --> 00:04:06.890
+Question 2. Which boot stage is
+the shortest on the course machine?
+
+62
+00:04:07.330 --> 00:04:14.850
+The kernel. Now open animations A1.2 and
+A1.3 in the course hub, and run lab TD0.

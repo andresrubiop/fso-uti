@@ -1,0 +1,316 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:05.200
+Take a look at this simple setup.
+
+2
+00:00:05.580 --> 00:00:09.610
+We have a standard process attempting to
+read a file that contains exactly eight
+
+3
+00:00:09.660 --> 00:00:11.880
+characters of data, A through H.
+
+4
+00:00:12.120 --> 00:00:17.030
+For our first test, the process uses the
+open system call twice on the same file,
+
+5
+00:00:17.080 --> 00:00:19.300
+assigning two different file descriptors.
+
+6
+00:00:19.600 --> 00:00:23.500
+If we read four bytes from the
+first descriptor, we get ABCD.
+
+7
+00:00:23.640 --> 00:00:27.710
+If we read four bytes from the second
+descriptor, we get the exact same text.
+
+8
+00:00:27.760 --> 00:00:31.280
+The final output is ABCD, ABCD.
+
+9
+00:00:31.680 --> 00:00:34.500
+Now, let's change just one line of code.
+
+10
+00:00:34.780 --> 00:00:39.010
+Instead of opening the file a second
+time, we will use the dup system call to
+
+11
+00:00:39.060 --> 00:00:40.720
+duplicate the first descriptor.
+
+12
+00:00:40.980 --> 00:00:45.890
+The first read still gets ABCD, but the
+second read picks up exactly where the first
+
+13
+00:00:45.940 --> 00:00:48.640
+one left off, reading EFGH.
+
+14
+00:00:48.980 --> 00:00:52.080
+Our final output is now ABCD, EFGH.
+
+15
+00:00:52.520 --> 00:00:56.700
+Why does changing one system call
+completely alter how the file is read?
+
+16
+00:00:56.920 --> 00:01:00.300
+To find the answer, we have to
+look below the privilege boundary.
+
+17
+00:01:00.680 --> 00:01:03.260
+Let's examine the operating
+system's architecture.
+
+18
+00:01:03.760 --> 00:01:07.180
+Above the privilege boundary is
+user mode, where our program runs.
+
+19
+00:01:07.400 --> 00:01:11.130
+Below the line is kernel mode, where the
+kernel strictly controls access to the
+
+20
+00:01:11.180 --> 00:01:15.900
+hardware. When you read a file, your
+process relies on three hidden tables.
+
+21
+00:01:16.120 --> 00:01:18.120
+The first is the descriptor table.
+
+22
+00:01:18.180 --> 00:01:21.860
+The kernel maintains one unique
+descriptor table for every process.
+
+23
+00:01:22.380 --> 00:01:24.960
+Next is the system-wide open file table.
+
+24
+00:01:25.100 --> 00:01:29.250
+This table tracks the current offset, the
+exact byte position where the very next
+
+25
+00:01:29.300 --> 00:01:31.500
+read or write operation will happen.
+
+26
+00:01:31.960 --> 00:01:35.340
+Finally, at the bottom, we have
+the in-memory inode table.
+
+27
+00:01:35.460 --> 00:01:39.780
+This is the single active representation
+of the file's metadata loaded in RAM.
+
+28
+00:01:40.080 --> 00:01:44.650
+When a program calls open twice, the kernel
+creates two completely separate entries
+
+29
+00:01:44.700 --> 00:01:49.210
+in the open file table. Each entry gets
+its own independent offset, starting at
+
+30
+00:01:49.260 --> 00:01:53.240
+zero. That is why both of those
+descriptors read the start of the file.
+
+31
+00:01:53.620 --> 00:01:55.700
+The dup system call works differently.
+
+32
+00:01:55.860 --> 00:01:58.600
+It simply copies the pointer
+in the descriptor table.
+
+33
+00:01:58.820 --> 00:02:02.820
+Both descriptors now point to the exact
+same entry in the open file table.
+
+34
+00:02:03.040 --> 00:02:07.200
+Because they share a single open file
+description, they share the offset.
+
+35
+00:02:07.420 --> 00:02:10.980
+When one read advances the
+position, the other sees the change.
+
+36
+00:02:11.120 --> 00:02:15.810
+This is the exact mechanism your shell relies
+on when redirecting error and standard
+
+37
+00:02:15.860 --> 00:02:18.000
+outputs into a single log file.
+
+38
+00:02:18.400 --> 00:02:22.550
+Notice what happens to this structure if
+a file has an inode but no actual data
+
+39
+00:02:22.600 --> 00:02:26.520
+blocks on the disk. This
+is a FIFO, or named pipe.
+
+40
+00:02:26.860 --> 00:02:31.910
+Instead of writing to a drive, a FIFO
+routes data through a 64-kilobyte buffer
+
+41
+00:02:31.960 --> 00:02:35.320
+located entirely inside
+the kernel's memory.
+
+42
+00:02:35.600 --> 00:02:39.630
+Because this pipe sits in memory, it
+enforces strict rules to keep data
+
+43
+00:02:39.680 --> 00:02:45.100
+synchronized. If a process calls open to
+read a FIFO, it will intentionally block.
+
+44
+00:02:45.320 --> 00:02:48.940
+The kernel makes it wait until another
+process opens the pipe for writing.
+
+45
+00:02:49.360 --> 00:02:52.700
+Once the connection is made,
+writing is heavily regulated.
+
+46
+00:02:52.960 --> 00:02:57.540
+On Linux, any write of 4096
+bytes or less is atomic.
+
+47
+00:02:57.780 --> 00:03:01.870
+The kernel slots these blocks in cleanly,
+guaranteeing that messages from different
+
+48
+00:03:01.920 --> 00:03:03.440
+writers never mix.
+
+49
+00:03:05.080 --> 00:03:09.330
+And when the last writer closes its
+descriptor, the reader simply receives a zero,
+
+50
+00:03:09.380 --> 00:03:11.260
+indicating the end of the file.
+
+51
+00:03:11.660 --> 00:03:16.390
+The kernel manages complex inter-process
+communication using the exact same three-table
+
+52
+00:03:16.440 --> 00:03:19.880
+architecture, even when the
+disk is completely absent.
+
+53
+00:03:20.260 --> 00:03:22.720
+Let's test these rules with
+a practical constraint.
+
+54
+00:03:23.020 --> 00:03:27.730
+What happens if we create a FIFO inside a
+network shared folder and try to use it as
+
+55
+00:03:27.780 --> 00:03:30.220
+a chat pipe between two different laptops?
+
+56
+00:03:30.420 --> 00:03:35.050
+The connection fails. A shared network
+folder only broadcasts the name of the file
+
+57
+00:03:35.100 --> 00:03:38.800
+to other machines. It cannot share
+the underlying kernel memory.
+
+58
+00:03:39.100 --> 00:03:43.430
+When each laptop opens that network path,
+its local operating system simply creates
+
+59
+00:03:43.480 --> 00:03:46.440
+its own isolated 64-kilobyte buffer.
+
+60
+00:03:46.700 --> 00:03:48.880
+The two machines never actually connect.
+
+61
+00:03:49.140 --> 00:03:54.150
+A file is a live object, managed actively
+and exclusively within the boundaries of a
+
+62
+00:03:54.200 --> 00:03:56.620
+local machine's kernel. Let's review.
+
+63
+00:03:56.880 --> 00:04:01.210
+When a process calls dup, which kernel
+table entry is shared to keep the offset in
+
+64
+00:04:01.260 --> 00:04:07.430
+sync? The open file description. Why
+can't a FIFO connect two different
+
+65
+00:04:07.480 --> 00:04:09.960
+computers over a shared network drive.
+
+66
+00:04:10.340 --> 00:04:15.480
+Because the pipe exists entirely in the
+local machine's kernel, not on the disk.
+
+67
+00:04:15.980 --> 00:04:23.020
+Now open animations A3.2 and A3.3
+in the course hub and run lab TD2.

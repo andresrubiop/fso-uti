@@ -1,0 +1,256 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.750
+Ever run a program in the terminal that
+gets stuck, and you hit Ctrl-C to kill it?
+
+2
+00:00:07.800 --> 00:00:10.640
+That instant stop feels like magic.
+
+3
+00:00:10.720 --> 00:00:13.500
+But it relies on a very
+specific mechanism.
+
+4
+00:00:14.000 --> 00:00:18.100
+When you press those keys, the terminal
+sends a signal to the running process.
+
+5
+00:00:18.380 --> 00:00:22.780
+This is an asynchronous notification
+telling the program to act right now.
+
+6
+00:00:23.020 --> 00:00:25.040
+The OS kernel is the primary sender.
+
+7
+00:00:25.300 --> 00:00:29.390
+If your program accesses restricted memory,
+the kernel fires a SIGSEGV signal to
+
+8
+00:00:29.440 --> 00:00:34.190
+terminate it. It sends SIGPIPE for writing
+to a pipe without a reader, or SIGCHLD
+
+9
+00:00:34.240 --> 00:00:35.800
+when a child process ends.
+
+10
+00:00:36.040 --> 00:00:39.690
+And one process can directly send a signal
+to another process by using the kill
+
+11
+00:00:39.740 --> 00:00:44.690
+system call. Signals are the standard way
+the system forces a process to react to
+
+12
+00:00:44.740 --> 00:00:48.750
+outside events. But getting a signal
+doesn't mean your program has to immediately
+
+13
+00:00:48.800 --> 00:00:52.800
+crash and burn. When a signal
+arrives, your process has choices.
+
+14
+00:00:53.060 --> 00:00:57.430
+It can accept the default action, ignore
+the signal completely, or catch it using
+
+15
+00:00:57.480 --> 00:01:00.100
+sigaction to run a
+custom handler function.
+
+16
+00:01:00.560 --> 00:01:03.420
+There is, however, a strict
+limit to this freedom.
+
+17
+00:01:03.880 --> 00:01:07.850
+SIGKILL and SIGSTOP represent the system
+administrator's ultimate authority over the
+
+18
+00:01:07.900 --> 00:01:12.930
+hardware. As the manual outlines, these
+two specific signals can never be caught,
+
+19
+00:01:12.980 --> 00:01:16.720
+ignored, or blocked by any process,
+no matter how it is programmed.
+
+20
+00:01:17.040 --> 00:01:20.790
+You can program a custom response for
+almost any interruption, but the kernel
+
+21
+00:01:20.840 --> 00:01:24.160
+retains the absolute power to
+pause or terminate your code.
+
+22
+00:01:24.460 --> 00:01:27.640
+Knowing when a signal actually
+takes effect is crucial.
+
+23
+00:01:28.160 --> 00:01:31.460
+Calling the kill system call doesn't
+execute the interruption instantly.
+
+24
+00:01:31.540 --> 00:01:34.500
+It only marks the signal as
+pending inside the kernel.
+
+25
+00:01:34.840 --> 00:01:38.170
+The kernel waits to deliver this pending
+signal until the moment the process crosses
+
+26
+00:01:38.220 --> 00:01:41.460
+back into user mode, like
+after a context switch.
+
+27
+00:01:41.640 --> 00:01:46.190
+And if your process is currently stopped,
+newly arriving signals like SIGUSR1 are
+
+28
+00:01:46.240 --> 00:01:48.320
+not lost. They are simply blocked.
+
+29
+00:01:48.680 --> 00:01:52.330
+That blocked signal sits safely in a
+queue, waiting patiently until the process
+
+30
+00:01:52.380 --> 00:01:55.220
+receives a SIGCONT signal
+and resumes execution.
+
+31
+00:01:55.580 --> 00:01:58.180
+Signals do not just vanish into the void.
+
+32
+00:01:58.680 --> 00:02:02.130
+Accounting for these delayed delivery
+states helps you write predictable, stable
+
+33
+00:02:02.180 --> 00:02:06.730
+software. Because a custom handler can
+pause your program at any unpredictable
+
+34
+00:02:06.780 --> 00:02:10.910
+millisecond, you must follow strict
+coding rules to avoid corrupting your own
+
+35
+00:02:10.960 --> 00:02:16.450
+memory. Inside a handler, you are only
+allowed to use async-signal-safe functions,
+
+36
+00:02:16.500 --> 00:02:18.220
+like the write system call.
+
+37
+00:02:18.320 --> 00:02:23.090
+You cannot use printf. If a signal arrives
+while the main program is already halfway
+
+38
+00:02:23.140 --> 00:02:27.410
+through filling a printf buffer, your
+handler will re-enter that exact same buffer
+
+39
+00:02:27.460 --> 00:02:29.620
+and completely mangle your output.
+
+40
+00:02:29.980 --> 00:02:33.300
+This precise timing creates
+a classic race condition.
+
+41
+00:02:33.760 --> 00:02:37.270
+Imagine your program checks a condition
+variable, sees it must wait, and calls
+
+42
+00:02:37.320 --> 00:02:41.810
+pause. If a signal hits in the microscopic
+gap before sleeping, the handler runs
+
+43
+00:02:41.860 --> 00:02:46.540
+early. The process then sleeps forever,
+waiting for a signal it already received.
+
+44
+00:02:46.860 --> 00:02:48.920
+The fix is strict ordering.
+
+45
+00:02:49.050 --> 00:02:53.730
+You block the signal first with sigprocmask,
+safely check your condition, and then
+
+46
+00:02:53.780 --> 00:02:58.350
+call sigsuspend. sigsuspend works because
+it replaces the mask and puts the process
+
+47
+00:02:58.400 --> 00:03:01.400
+to sleep in one single atomic operation.
+
+48
+00:03:01.560 --> 00:03:04.500
+The kernel guarantees no signal
+can slip through the cracks.
+
+49
+00:03:04.860 --> 00:03:08.600
+Let's review. Which two signals
+can never be caught or ignored?
+
+50
+00:03:09.040 --> 00:03:11.860
+The exact answers are SIGKILL and SIGSTOP.
+
+51
+00:03:12.080 --> 00:03:16.380
+Why must you use sigsuspend instead of just
+checking a variable and going to sleep?
+
+52
+00:03:16.500 --> 00:03:20.660
+To prevent a race condition where the signal
+arrives right before the sleep begins.
+
+53
+00:03:21.060 --> 00:03:26.240
+Now open animation A6.1 in the
+course hub and run lab TD5.

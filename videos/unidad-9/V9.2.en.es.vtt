@@ -1,0 +1,302 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.960
+Un agente de IA es solo otro proceso del
+sistema, pero con un trabajo singular.
+
+2
+00:00:08.020 --> 00:00:10.100
+Actúa en tu nombre.
+
+3
+00:00:10.840 --> 00:00:13.470
+En esta unidad usamos un micro-LLM.
+
+4
+00:00:13.520 --> 00:00:19.450
+Tiene exactamente 175 000 parámetros y su única
+tarea es traducir una petición en inglés o
+
+5
+00:00:19.500 --> 00:00:22.460
+en español a una llamada
+a herramienta concreta.
+
+6
+00:00:22.740 --> 00:00:27.010
+Pero un modelo de lenguaje es un motor
+estadístico, no un programa determinista.
+
+7
+00:00:27.060 --> 00:00:32.590
+Puede alucinar una orden con facilidad o ser
+manipulado por una instrucción oculta en un
+
+8
+00:00:32.640 --> 00:00:36.220
+documento que lee, un ataque
+llamado inyección de instrucciones.
+
+9
+00:00:36.660 --> 00:00:41.390
+Como la salida es simplemente texto no confiable,
+el sistema operativo no puede dar por hecho que
+
+10
+00:00:41.440 --> 00:00:42.980
+las decisiones del agente son seguras.
+
+11
+00:00:43.320 --> 00:00:47.520
+Para comprobarlo, vamos a hacer una prueba
+de penetración a nuestro propio sistema.
+
+12
+00:00:47.740 --> 00:00:50.930
+Empezamos dándole al agente una
+petición maliciosa a propósito.
+
+13
+00:00:50.980 --> 00:00:57.380
+Le pedimos que lea el archivo de
+contraseñas, muy sensible, /etc/passwd.
+
+14
+00:00:57.740 --> 00:00:59.720
+El modelo hace su trabajo a la perfección.
+
+15
+00:00:59.940 --> 00:01:04.320
+Traduce la intención maliciosa y genera
+exactamente la llamada a herramienta pedida,
+
+16
+00:01:04.380 --> 00:01:05.880
+dirigida a ese archivo protegido.
+
+17
+00:01:06.140 --> 00:01:10.440
+Aunque el usuario inició el agente, el
+agente es una entidad independiente.
+
+18
+00:01:10.760 --> 00:01:14.900
+El sistema no le concede automáticamente
+toda la confianza operativa del usuario.
+
+19
+00:01:15.260 --> 00:01:17.940
+Esto nos lleva a la regla
+central de nuestra arquitectura.
+
+20
+00:01:18.120 --> 00:01:23.550
+El modelo de IA propone una acción, pero el
+sistema operativo dispone y decide si esa
+
+21
+00:01:23.600 --> 00:01:25.500
+acción puede ejecutarse de verdad.
+
+22
+00:01:25.920 --> 00:01:31.190
+Ese texto no confiable viaja por un socket
+Unix con permisos 0600 directo hasta
+
+23
+00:01:31.240 --> 00:01:35.830
+el demonio agentd. Este gestor central usa
+un grupo de hilos para atender peticiones
+
+24
+00:01:35.880 --> 00:01:40.980
+concurrentes. En vez de preguntarle al agente,
+agentd le pregunta directamente al núcleo.
+
+25
+00:01:41.360 --> 00:01:45.380
+Con SO_PEERCRED obtiene el
+UID y el PID del cliente.
+
+26
+00:01:45.620 --> 00:01:50.280
+Cada decisión y cada acción quedan registradas
+para siempre en un registro de auditoría.
+
+27
+00:01:50.740 --> 00:01:54.930
+Antes de considerar siquiera una acción, el
+sistema exige que el núcleo verifique la
+
+28
+00:01:54.980 --> 00:01:57.940
+identidad de quien llama y
+deja un rastro permanente.
+
+29
+00:01:58.820 --> 00:02:01.700
+Normalmente, la petición pasa
+luego por una capa de políticas.
+
+30
+00:02:01.840 --> 00:02:06.210
+El demonio analiza el texto, lo compara con un
+catálogo cerrado de herramientas y obliga a
+
+31
+00:02:06.260 --> 00:02:09.440
+que todas las rutas se queden dentro
+del espacio de trabajo del agente.
+
+32
+00:02:09.560 --> 00:02:14.410
+Si la acción es destructiva, la política
+lo detiene todo para pedir al usuario su
+
+33
+00:02:14.460 --> 00:02:19.970
+consentimiento explícito. Pero, para probar la
+verdadera resistencia de nuestro sistema operativo,
+
+34
+00:02:20.020 --> 00:02:23.340
+vamos a desactivar a propósito
+este motor de políticas.
+
+35
+00:02:23.640 --> 00:02:28.130
+Con el guardián de la aplicación apagado,
+nuestra petición maliciosa de leer el
+
+36
+00:02:28.180 --> 00:02:32.200
+archivo de contraseñas se cuela sin problemas
+y avanza libremente hacia la ejecución.
+
+37
+00:02:32.720 --> 00:02:37.090
+Quitar esta red de seguridad muestra por
+qué confiar en una sola capa de seguridad
+
+38
+00:02:37.140 --> 00:02:40.020
+de la aplicación deja un
+sistema muy vulnerable.
+
+39
+00:02:40.540 --> 00:02:44.140
+La petición llega al programa
+que ejecuta, agent_exec.
+
+40
+00:02:44.400 --> 00:02:49.490
+Se prepara para ejecutar la herramienta creando un
+proceso nuevo con las llamadas al sistema fork y
+
+41
+00:02:49.540 --> 00:02:54.530
+execve. De inmediato aplica límites estrictos
+de memoria y de descriptores de archivo con
+
+42
+00:02:54.580 --> 00:03:00.160
+setrlimit, y pone una alarma para garantizar
+que el código no confiable no corra sin fin.
+
+43
+00:03:00.780 --> 00:03:05.690
+Ahora este proceso tan restringido está
+aislado, preparado y listo para ejecutar el
+
+44
+00:03:05.740 --> 00:03:07.320
+ataque contra el archivo del sistema.
+
+45
+00:03:07.760 --> 00:03:11.450
+Aunque estos límites de recursos impiden que
+la máquina se caiga, no hacen absolutamente
+
+46
+00:03:11.500 --> 00:03:15.620
+nada para evitar que el proceso
+abra y lea datos protegidos.
+
+47
+00:03:15.840 --> 00:03:17.620
+Llega la hora de la verdad.
+
+48
+00:03:17.860 --> 00:03:22.530
+El proceso rebelde aislado por fin intenta
+ejecutar la orden para abrir /etc/passwd.
+
+49
+00:03:22.580 --> 00:03:28.290
+Para hacerlo, el proceso, que vive arriba,
+en modo usuario, tiene que cruzar la
+
+50
+00:03:28.340 --> 00:03:31.780
+frontera de privilegios hacia el modo
+núcleo para acceder a un archivo.
+
+51
+00:03:32.120 --> 00:03:34.900
+Aquí el núcleo interviene
+de forma decisiva.
+
+52
+00:03:35.300 --> 00:03:40.330
+Como agent_exec aplicó antes un entorno aislado
+de Landlock, el núcleo deniega rotundamente
+
+53
+00:03:40.380 --> 00:03:44.300
+la petición de acceso. Esta es la
+característica que define a Landlock.
+
+54
+00:03:44.600 --> 00:03:49.010
+Una vez que un proceso se restringe a sí mismo, ese
+entorno aislado se hereda para siempre y no se puede
+
+55
+00:03:49.060 --> 00:03:51.860
+deshacer, aunque falle la
+política de la aplicación.
+
+56
+00:03:52.440 --> 00:03:56.660
+La verdadera defensa en profundidad consiste en suponer
+que toda capa de la aplicación acabará fallando.
+
+57
+00:03:56.740 --> 00:04:01.600
+Cuando eso pasa, el entorno aislado del núcleo
+queda como la autoridad última, imposible de saltar.
+
+58
+00:04:01.980 --> 00:04:07.310
+Repasemos. Primero, ¿qué opción de socket
+le da al demonio la identidad exacta
+
+59
+00:04:07.360 --> 00:04:10.600
+del cliente? Es SO_PEERCRED.
+
+60
+00:04:10.920 --> 00:04:15.920
+Segundo, ¿qué primitiva de Linux actúa como el entorno
+aislado final del núcleo para detener al agente?
+
+61
+00:04:16.160 --> 00:04:22.890
+Es Landlock. Ahora abre las
+animaciones A9.2 y A9.4 en el aula
+
+62
+00:04:22.940 --> 00:04:26.740
+y haz el laboratorio
+TD8 con su reto de IA.

@@ -1,0 +1,298 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.190
+Cada segundo, tu máquina
+procesa enormes flujos de datos.
+
+2
+00:00:08.240 --> 00:00:11.860
+Sin perder el ritmo, todo
+parece perfectamente estable.
+
+3
+00:00:12.480 --> 00:00:15.260
+Pero entonces ocurre un fallo de software.
+
+4
+00:00:15.640 --> 00:00:19.600
+Un simple controlador de disco intenta
+acceder a una dirección de memoria prohibida.
+
+5
+00:00:20.000 --> 00:00:23.680
+En algunos sistemas, ese
+único error se propaga.
+
+6
+00:00:23.880 --> 00:00:27.760
+Toda la máquina se congela y la única
+salida es reiniciarla a la fuerza.
+
+7
+00:00:28.140 --> 00:00:32.290
+En otros sistemas, ese mismo controlador
+defectuoso queda aislado al instante.
+
+8
+00:00:32.340 --> 00:00:36.850
+Se reinicia en silencio en segundo plano y
+la máquina sigue funcionando como si nada
+
+9
+00:00:36.900 --> 00:00:40.660
+hubiera pasado. La diferencia está
+en la frontera de privilegios.
+
+10
+00:00:41.000 --> 00:00:45.410
+Es la línea estricta que separa el
+modo usuario, arriba, del modo núcleo,
+
+11
+00:00:45.460 --> 00:00:50.550
+abajo. Que un sistema operativo
+sobreviva a un fallo depende de cuánto de
+
+12
+00:00:50.600 --> 00:00:54.160
+su software tiene permiso para cruzar
+esa frontera hacia el modo núcleo.
+
+13
+00:00:54.500 --> 00:00:58.890
+Primero está la arquitectura
+monolítica, la de Linux y los BSD.
+
+14
+00:00:59.350 --> 00:01:03.860
+Aquí, todos los servicios centrales (el planificador,
+la gestión de memoria, los sistemas de archivos y
+
+15
+00:01:03.910 --> 00:01:06.490
+los controladores) están
+dentro del modo núcleo.
+
+16
+00:01:06.870 --> 00:01:09.190
+Este diseño es excepcionalmente rápido.
+
+17
+00:01:09.410 --> 00:01:13.640
+Una aplicación solo necesita una llamada
+al sistema: un cruce de ida y uno
+
+18
+00:01:13.690 --> 00:01:18.800
+de vuelta. Pero como todo comparte el modo
+núcleo, un error en un solo controlador
+
+19
+00:01:18.850 --> 00:01:22.650
+puede corromper la memoria compartida
+y hacer caer todo el sistema.
+
+20
+00:01:23.350 --> 00:01:25.800
+Linux es monolítico, pero modular.
+
+21
+00:01:25.850 --> 00:01:31.480
+Esta salida, en el equipo del curso,
+muestra 258 módulos cargados: son
+
+22
+00:01:31.530 --> 00:01:34.250
+controladores que el sistema
+puede agregar o quitar en marcha.
+
+23
+00:01:34.690 --> 00:01:40.450
+Luego está el micronúcleo, en
+sistemas como seL4, QNX y MINIX 3.
+
+24
+00:01:40.750 --> 00:01:46.150
+Este diseño sube al modo usuario casi todos los servicios,
+como los sistemas de archivos y los controladores.
+
+25
+00:01:46.430 --> 00:01:49.410
+Solo lo mínimo indispensable queda
+debajo de la frontera de privilegios.
+
+26
+00:01:49.570 --> 00:01:51.490
+Eso da un aislamiento estricto.
+
+27
+00:01:51.710 --> 00:01:54.880
+Si un controlador falla en modo usuario,
+el sistema simplemente lo reinicia.
+
+28
+00:01:54.930 --> 00:01:57.290
+El núcleo ni se entera.
+
+29
+00:01:57.630 --> 00:01:59.250
+El precio es el rendimiento.
+
+30
+00:01:59.910 --> 00:02:02.960
+Ahora cada operación necesita más mensajes
+y cruces de frontera para hacer el mismo
+
+31
+00:02:03.010 --> 00:02:08.190
+trabajo. También hay un enfoque
+híbrido, el de Windows NT y macOS.
+
+32
+00:02:08.610 --> 00:02:13.500
+Es un término medio: deja la mayoría de los
+servicios en modo núcleo, pero pasa algunos al modo
+
+33
+00:02:13.550 --> 00:02:16.710
+usuario, y hereda las ventajas
+y los problemas de ambos.
+
+34
+00:02:17.370 --> 00:02:21.540
+Decidir qué corre en modo núcleo es una
+elección de ingeniería entre la velocidad
+
+35
+00:02:21.590 --> 00:02:24.410
+pura de ejecución y la
+resistencia que da el aislamiento.
+
+36
+00:02:24.990 --> 00:02:30.200
+Entonces, ¿cómo se cargan en memoria estas
+arquitecturas tan complejas a partir de
+
+37
+00:02:30.250 --> 00:02:32.770
+una máquina totalmente apagada?
+
+38
+00:02:33.250 --> 00:02:35.050
+Ocurre en cuatro etapas.
+
+39
+00:02:35.570 --> 00:02:37.880
+Primero, el firmware UEFI.
+
+40
+00:02:37.930 --> 00:02:42.320
+Prueba el hardware, inicializa la memoria
+y los buses, y busca en su memoria
+
+41
+00:02:42.370 --> 00:02:44.330
+no volátil las instrucciones de arranque.
+
+42
+00:02:44.690 --> 00:02:48.380
+Después, el cargador de arranque,
+como GRUB o systemd-boot.
+
+43
+00:02:48.430 --> 00:02:54.350
+Toma el núcleo, llamado vmlinuz, y un sistema
+de archivos inicial llamado initramfs,
+
+44
+00:02:54.430 --> 00:02:55.930
+y los carga en memoria.
+
+45
+00:02:56.510 --> 00:03:01.200
+La etapa 3 es el núcleo. Se descomprime,
+prepara la memoria virtual, detecta los
+
+46
+00:03:01.250 --> 00:03:05.250
+procesadores y lanza el
+primer proceso, el PID 1.
+
+47
+00:03:05.750 --> 00:03:11.300
+Por último, el espacio de usuario. El proceso
+systemd, que corre como PID 1, arranca todos los
+
+48
+00:03:11.350 --> 00:03:14.890
+servicios restantes en paralelo hasta
+llegar a la pantalla de inicio de sesión.
+
+49
+00:03:15.070 --> 00:03:17.440
+Todos los demás procesos
+descienden de este único nodo.
+
+50
+00:03:17.490 --> 00:03:22.000
+Podemos medir exactamente cuánto tarda
+todo el arranque en el equipo del
+
+51
+00:03:22.050 --> 00:03:25.170
+curso con el comando systemd-analyze.
+
+52
+00:03:25.390 --> 00:03:27.330
+Este gráfico muestra cómo
+se reparte el tiempo.
+
+53
+00:03:27.610 --> 00:03:33.340
+El firmware tardó 9,1 segundos; el cargador,
+4,9 segundos, y el espacio de usuario, 14,5
+
+54
+00:03:33.390 --> 00:03:37.570
+segundos. La etapa del núcleo
+tardó solo 2,6 segundos.
+
+55
+00:03:37.990 --> 00:03:42.210
+Aunque es la pieza más compleja y
+crítica de toda la arquitectura,
+
+56
+00:03:42.490 --> 00:03:45.440
+cargar el núcleo es en realidad
+la etapa más rápida del arranque.
+
+57
+00:03:45.490 --> 00:03:50.280
+La resistencia de un sistema operativo
+la define su arquitectura, y ponerlo en
+
+58
+00:03:50.330 --> 00:03:54.310
+marcha exige un relevo
+preciso en cuatro pasos.
+
+59
+00:03:54.950 --> 00:03:59.380
+Repasemos. ¿En qué arquitectura de núcleo
+un controlador que falla tumba todo el
+
+60
+00:03:59.430 --> 00:04:02.470
+sistema? En la arquitectura monolítica.
+
+61
+00:04:03.110 --> 00:04:06.890
+Pregunta 2. ¿Qué etapa del arranque es
+la más corta en el equipo del curso?
+
+62
+00:04:07.330 --> 00:04:14.850
+El núcleo. Ahora abre las animaciones A1.2
+y A1.3 en el aula y haz el laboratorio TD0.

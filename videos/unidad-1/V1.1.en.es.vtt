@@ -1,0 +1,270 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.480
+Abres una terminal, escribes
+un comando y pulsas Enter.
+
+2
+00:00:06.700 --> 00:00:12.290
+Parece simple, pero los programas de alto nivel
+como Bash no ven nada de la realidad física.
+
+3
+00:00:12.340 --> 00:00:17.410
+No saben qué es un sector
+del disco ni cómo manejar
+
+4
+00:00:17.460 --> 00:00:20.420
+las señales eléctricas
+que encienden tu monitor.
+
+5
+00:00:20.800 --> 00:00:25.170
+Si cada programa intentara mandar
+señales al hardware por su cuenta
+
+6
+00:00:25.220 --> 00:00:29.280
+y todos a la vez, el resultado sería un
+conflicto inmediato y el sistema fallaría.
+
+7
+00:00:29.400 --> 00:00:34.680
+Para evitar ese caos entra un intermediario
+estricto: el sistema operativo.
+
+8
+00:00:35.080 --> 00:00:39.110
+Sin este gestor silencioso, un computador
+es solo un montón inestable de
+
+9
+00:00:39.160 --> 00:00:44.340
+componentes electrónicos. El sistema operativo
+lo convierte en una herramienta fiable.
+
+10
+00:00:44.600 --> 00:00:47.140
+El sistema operativo tiene
+dos misiones principales.
+
+11
+00:00:47.400 --> 00:00:49.420
+La primera es gestionar los recursos.
+
+12
+00:00:49.680 --> 00:00:52.800
+Reparte el tiempo de CPU,
+la memoria y la energía.
+
+13
+00:00:53.000 --> 00:00:57.920
+Cuando varios programas piden el mismo
+recurso a la vez, hace de árbitro
+
+14
+00:00:58.120 --> 00:01:00.000
+y resuelve los conflictos.
+
+15
+00:01:00.500 --> 00:01:04.040
+La segunda misión es ofrecer
+una máquina más fácil de usar.
+
+16
+00:01:04.260 --> 00:01:07.850
+En lugar de obligar a los programadores
+a lidiar con interrupciones o con
+
+17
+00:01:07.900 --> 00:01:13.620
+registros de controladores, ofrece abstracciones
+limpias: procesos, archivos y sockets.
+
+18
+00:01:13.900 --> 00:01:18.610
+Así reemplaza una máquina física de
+complejidad imposible por un lienzo
+
+19
+00:01:18.660 --> 00:01:23.890
+ordenado y programable. Para ver cómo
+llega un comando al hardware, hay que
+
+20
+00:01:23.940 --> 00:01:25.780
+recorrer el sistema de arriba abajo.
+
+21
+00:01:25.880 --> 00:01:28.260
+El viaje empieza en las
+dos capas superiores.
+
+22
+00:01:28.900 --> 00:01:32.490
+Las aplicaciones, donde viven tus programas
+y bash, justo encima de las bibliotecas
+
+23
+00:01:32.540 --> 00:01:38.010
+del sistema, como glibc. Juntas, estas dos
+capas funcionan en lo que se llama modo
+
+24
+00:01:38.060 --> 00:01:41.460
+usuario. En modo usuario, las
+bibliotecas tienen cierta libertad.
+
+25
+00:01:41.540 --> 00:01:45.850
+Pueden resolver solas tareas sencillas,
+como juntar texto en un búfer
+
+26
+00:01:45.900 --> 00:01:50.950
+local. Pero en cuanto un programa
+necesita escribir en la pantalla o pedir
+
+27
+00:01:51.000 --> 00:01:53.110
+más memoria, choca con un límite estricto.
+
+28
+00:01:53.160 --> 00:01:55.720
+Esa línea divisoria es la
+frontera de privilegios.
+
+29
+00:01:55.860 --> 00:02:00.020
+La única forma autorizada de cruzarla
+es hacer una llamada al sistema.
+
+30
+00:02:00.200 --> 00:02:04.770
+Al dejar a las aplicaciones encima de esa
+línea, sin acceso directo al hardware,
+
+31
+00:02:04.820 --> 00:02:10.020
+el sistema fija el perímetro donde
+empiezan todos los controles de seguridad.
+
+32
+00:02:10.480 --> 00:02:14.850
+Con la llamada al sistema, la orden baja
+por debajo de la frontera y entra en modo
+
+33
+00:02:14.900 --> 00:02:18.320
+núcleo. Aquí el núcleo
+toma el control absoluto.
+
+34
+00:02:18.880 --> 00:02:22.540
+Algo clave: el núcleo no es un
+proceso, y tampoco es root.
+
+35
+00:02:22.740 --> 00:02:25.420
+Es el software central
+que gestiona el sistema.
+
+36
+00:02:25.740 --> 00:02:30.190
+Se encarga de la protección: hace cumplir
+los permisos de los archivos y garantiza que
+
+37
+00:02:30.240 --> 00:02:33.020
+los programas no puedan leer
+la memoria de los demás.
+
+38
+00:02:33.620 --> 00:02:38.450
+Los subsistemas del núcleo, como el planificador
+y el gestor de memoria, atienden la petición
+
+39
+00:02:38.500 --> 00:02:41.580
+y la pasan a la capa
+siguiente: los controladores.
+
+40
+00:02:42.260 --> 00:02:46.130
+Al final, la orden llega a la capa de
+hardware, abajo del todo, donde se ejecuta
+
+41
+00:02:46.180 --> 00:02:52.030
+la acción física. Este recorrido obligatorio de
+arriba abajo garantiza a la vez el funcionamiento
+
+42
+00:02:52.080 --> 00:02:54.380
+y una seguridad estricta
+en todo el sistema.
+
+43
+00:02:55.060 --> 00:02:59.140
+Esta misma arquitectura por capas
+va mucho más allá de una laptop.
+
+44
+00:02:59.420 --> 00:03:02.540
+En los centros de datos y las
+supercomputadoras, domina.
+
+45
+00:03:02.880 --> 00:03:08.020
+Desde noviembre de 2017, todas las
+máquinas de la lista TOP500 usan Linux.
+
+46
+00:03:08.300 --> 00:03:09.860
+También está en tu bolsillo.
+
+47
+00:03:10.240 --> 00:03:14.740
+Los teléfonos Android usan el núcleo
+Linux; iOS usa el núcleo XNU.
+
+48
+00:03:15.280 --> 00:03:19.630
+Hasta los autos y los equipos médicos
+se apoyan en este esquema, a menudo con
+
+49
+00:03:19.680 --> 00:03:23.540
+micronúcleos de tiempo real como QNX, que
+garantizan tiempos exactos y seguridad.
+
+50
+00:03:24.200 --> 00:03:29.060
+En todos estos dispositivos, el sistema
+operativo es el traductor invisible
+
+51
+00:03:29.160 --> 00:03:33.300
+que une la intención humana
+con la energía eléctrica.
+
+52
+00:03:33.780 --> 00:03:38.280
+Repasemos. Pregunta uno: ¿qué dos
+capas funcionan en modo usuario?
+
+53
+00:03:40.360 --> 00:03:42.060
+Las aplicaciones y las bibliotecas.
+
+54
+00:03:42.660 --> 00:03:46.540
+Pregunta dos: ¿cuál es la única forma
+de cruzar la frontera de privilegios?
+
+55
+00:03:48.560 --> 00:03:54.680
+Una llamada al sistema. Ahora abre la animación
+A1.1 en el aula y haz el laboratorio TD0.

@@ -1,0 +1,305 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.430
+When you run a basic C program on a Linux
+machine, it operates entirely inside user
+
+2
+00:00:08.480 --> 00:00:13.510
+mode, or Ring 3. This is an isolated
+environment where the program is completely
+
+3
+00:00:13.560 --> 00:00:18.170
+powerless. On its own, it cannot touch the
+disk, it cannot read the network, and it
+
+4
+00:00:18.220 --> 00:00:19.660
+cannot write to the screen.
+
+5
+00:00:20.040 --> 00:00:24.430
+For a program to do anything useful, like
+print a simple greeting, it has to reach
+
+6
+00:00:24.480 --> 00:00:29.490
+the physical hardware. But the operating
+system's kernel sits below this boundary in
+
+7
+00:00:29.540 --> 00:00:32.480
+Ring 0, acting as a strict border guard.
+
+8
+00:00:32.590 --> 00:00:36.350
+If a program attempts to bypass this
+privilege boundary and access the hardware
+
+9
+00:00:36.400 --> 00:00:40.750
+directly, the processor raises an exception,
+and the kernel immediately terminates
+
+10
+00:00:40.800 --> 00:00:45.950
+the process. Because direct access is
+physically blocked, the program must securely
+
+11
+00:00:46.000 --> 00:00:48.860
+ask the kernel to perform
+the action on its behalf.
+
+12
+00:00:49.260 --> 00:00:51.220
+That request is a system call.
+
+13
+00:00:51.560 --> 00:00:55.390
+When your program uses the C write
+function, it is actually calling a wrapper
+
+14
+00:00:55.440 --> 00:00:58.620
+provided by the standard C library, glibc.
+
+15
+00:00:58.900 --> 00:01:02.850
+Underneath that wrapper, it has to follow
+a rigid hardware convention to cross the
+
+16
+00:01:02.900 --> 00:01:06.990
+boundary. We can see the truth of this
+process by looking at the exact assembly
+
+17
+00:01:07.040 --> 00:01:10.220
+instructions the program uses
+to prepare for the crossing.
+
+18
+00:01:10.540 --> 00:01:14.710
+This specific sequence of instructions is
+the non-negotiable protocol required to
+
+19
+00:01:14.760 --> 00:01:17.660
+safely pierce the operating
+system's privilege boundary.
+
+20
+00:01:18.000 --> 00:01:22.190
+Before crossing, the glibc wrapper must
+pack the details of the request into
+
+21
+00:01:22.240 --> 00:01:27.740
+specific CPU registers, following
+the strict Linux x86-64 convention.
+
+22
+00:01:27.920 --> 00:01:31.400
+First, the call number goes
+into the RAX register.
+
+23
+00:01:31.520 --> 00:01:35.400
+Here, the wrapper uses the number one
+to identify the right system call.
+
+24
+00:01:35.600 --> 00:01:40.160
+The remaining arguments are then
+placed into RDI, RSI, and RDX.
+
+25
+00:01:40.380 --> 00:01:42.350
+Notice a critical security feature.
+
+26
+00:01:42.400 --> 00:01:45.480
+The text itself does not
+travel inside the registers.
+
+27
+00:01:45.700 --> 00:01:49.960
+The RSI register only carries the address
+of where the text lives in memory.
+
+28
+00:01:50.160 --> 00:01:54.100
+The trigger moment arrives when the
+program executes the syscall instruction.
+
+29
+00:01:54.300 --> 00:02:00.300
+This forces the CPU to instantly switch
+to kernel mode, elevating to ring 0.
+
+30
+00:02:00.780 --> 00:02:05.190
+Execution jumps to a fixed predefined
+address that the kernel configured at system
+
+31
+00:02:05.240 --> 00:02:11.430
+boot, entry_SYSCALL_64. The user program
+has no control over this landing zone.
+
+32
+00:02:11.480 --> 00:02:13.280
+It cannot choose where it jumps.
+
+33
+00:02:13.820 --> 00:02:18.100
+Once below the boundary, the kernel
+takes complete control of the request.
+
+34
+00:02:18.440 --> 00:02:21.570
+Remember, the kernel is the
+core of the operating system.
+
+35
+00:02:21.620 --> 00:02:27.980
+It is not a process. The kernel reads
+the RAX register and uses it as an index.
+
+36
+00:02:28.160 --> 00:02:32.790
+That value of one points to a specific
+row in the syscall table, triggering the
+
+37
+00:02:32.840 --> 00:02:35.000
+correct handler, ksys_write.
+
+38
+00:02:35.460 --> 00:02:38.060
+The kernel does not trust
+the request blindly.
+
+39
+00:02:38.280 --> 00:02:41.360
+The handler first validates the
+file descriptor and the arguments.
+
+40
+00:02:41.760 --> 00:02:47.010
+Next, the kernel uses a function called
+copy_from_user to safely pull the actual text
+
+41
+00:02:47.060 --> 00:02:50.120
+from the memory address provided
+by the untrusted program.
+
+42
+00:02:50.500 --> 00:02:54.930
+By forcing the program to use a rigid
+table and fetching the memory itself, the
+
+43
+00:02:54.980 --> 00:02:58.700
+kernel guarantees it cannot be
+hijacked by malicious user code.
+
+44
+00:02:59.060 --> 00:03:01.920
+Finally, the device driver
+prints the text to the screen.
+
+45
+00:03:02.520 --> 00:03:06.730
+Once the hardware task is complete, the
+journey must finish by returning control to
+
+46
+00:03:06.780 --> 00:03:11.450
+the user program. The processor triggers
+the sysret instruction, dropping the CPU
+
+47
+00:03:11.500 --> 00:03:16.040
+privileges and returning execution
+across the boundary back to user mode.
+
+48
+00:03:16.220 --> 00:03:20.690
+The final numeric result of the system
+call operation is carried back in the RAX
+
+49
+00:03:20.740 --> 00:03:25.310
+register. But how does the program know if
+the kernel encountered an issue, like a
+
+50
+00:03:25.360 --> 00:03:31.330
+bad file descriptor? If RAX comes back
+with a value between minus 4095 and minus
+
+51
+00:03:31.380 --> 00:03:35.760
+one, the glibc wrapper recognizes
+this range as an error.
+
+52
+00:03:36.000 --> 00:03:38.050
+The wrapper simplifies
+this for the programmer.
+
+53
+00:03:38.100 --> 00:03:42.890
+It converts the return value to exactly
+minus one and securely stores the real error
+
+54
+00:03:42.940 --> 00:03:45.120
+code in a variable called errno.
+
+55
+00:03:45.280 --> 00:03:50.290
+Because every system call is a complex
+trip across a guarded border, failures can
+
+56
+00:03:50.340 --> 00:03:56.330
+happen. This is why the course programs
+wrap every call in an exit_if statement and
+
+57
+00:03:56.380 --> 00:04:00.600
+use perror to translate errno
+into a readable message.
+
+58
+00:04:01.220 --> 00:04:06.570
+Let's review. Which CPU instruction
+switches execution from user mode to kernel
+
+59
+00:04:06.620 --> 00:04:07.360
+mode?
+
+60
+00:04:10.040 --> 00:04:16.330
+The syscall instruction. Does the RSI
+register carry the text to be printed or its
+
+61
+00:04:16.380 --> 00:04:17.460
+memory address?
+
+62
+00:04:20.290 --> 00:04:22.170
+It carries the memory address.
+
+63
+00:04:22.410 --> 00:04:29.030
+Now open animation A2.1 in the course
+hub and run lab TD1 exercise one.

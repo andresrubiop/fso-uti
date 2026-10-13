@@ -1,0 +1,290 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.890
+En el laboratorio TD6 ponemos 8 programas a funcionar
+como vendedores concurrentes de entradas, con
+
+2
+00:00:08.940 --> 00:00:11.440
+una reserva compartida
+de 100 000 entradas.
+
+3
+00:00:11.780 --> 00:00:14.820
+Pero al revisar esta salida de la
+terminal, las cuentas no cuadran.
+
+4
+00:00:15.020 --> 00:00:21.440
+Vendieron 103 195 entradas y dejaron
+un saldo negativo de menos 7.
+
+5
+00:00:21.620 --> 00:00:24.260
+El código se ejecutó
+exactamente como estaba escrito.
+
+6
+00:00:24.480 --> 00:00:26.880
+Los vendedores son simplemente
+hilos de un proceso en C.
+
+7
+00:00:27.020 --> 00:00:30.970
+Aquí ves la resta, tickets--,
+ejecutándose dentro de
+
+8
+00:00:31.020 --> 00:00:36.890
+un bucle while. ¿Cómo puede un computador
+ejecutar bien una resta y aun así vender más
+
+9
+00:00:36.940 --> 00:00:38.820
+artículos de los que existen?
+
+10
+00:00:39.240 --> 00:00:41.820
+La respuesta está en cómo
+se ejecutan los hilos.
+
+11
+00:00:42.240 --> 00:00:46.910
+La ilusión de ejecución simultánea crea puntos
+ciegos ocultos que corrompen en silencio
+
+12
+00:00:46.960 --> 00:00:52.140
+tus datos. Los programadores usan hilos en
+vez de procesos completos por una razón:
+
+13
+00:00:52.300 --> 00:00:57.830
+la velocidad. Como muestra esta salida, crear
+un proceso en el equipo del curso tarda 248,8
+
+14
+00:00:57.880 --> 00:01:02.980
+microsegundos. Eso es 6,0 veces
+más que crear un solo hilo.
+
+15
+00:01:03.560 --> 00:01:05.940
+Los hilos son más rápidos
+porque no copian datos.
+
+16
+00:01:06.380 --> 00:01:10.720
+En la arquitectura, el modo usuario está encima de
+la frontera de privilegios y el modo núcleo, debajo.
+
+17
+00:01:10.940 --> 00:01:14.040
+Dentro de un proceso de usuario,
+los hilos trabajan juntos.
+
+18
+00:01:14.180 --> 00:01:19.000
+Comparten todo el espacio de direcciones:
+código, descriptores, montículo y datos globales.
+
+19
+00:01:19.300 --> 00:01:23.240
+Pero cada hilo tiene su propia pila privada
+y sus propios registros del hardware.
+
+20
+00:01:23.540 --> 00:01:28.100
+Esta arquitectura de memoria compartida
+es rápida, pero físicamente vulnerable.
+
+21
+00:01:28.340 --> 00:01:32.210
+Como no hay protección de memoria
+entre ellos, un error en un hilo puede
+
+22
+00:01:32.260 --> 00:01:34.380
+corromper al instante los datos de todos.
+
+23
+00:01:34.660 --> 00:01:38.450
+Volvamos a esa línea de código C
+responsable de la resta en la venta de
+
+24
+00:01:38.500 --> 00:01:44.430
+entradas. Para un procesador x86-64,
+una sola línea de C no es un solo
+
+25
+00:01:44.480 --> 00:01:49.340
+paso atómico. El hardware divide
+la resta en tres pasos distintos:
+
+26
+00:01:49.400 --> 00:01:53.690
+leer la variable de memoria a un registro,
+restarle uno y volver a escribir el
+
+27
+00:01:53.740 --> 00:01:57.970
+nuevo valor en memoria. El problema
+aparece cuando dos hilos distintos intentan
+
+28
+00:01:58.020 --> 00:02:00.220
+ejecutar estos pasos
+exactamente al mismo tiempo.
+
+29
+00:02:00.440 --> 00:02:04.770
+Si el hilo A y el hilo B hacen la
+lectura a la vez, los dos sacan
+
+30
+00:02:04.820 --> 00:02:06.960
+el mismo número inicial de la memoria.
+
+31
+00:02:07.460 --> 00:02:12.010
+Luego los dos restan uno en sus
+registros privados y los dos escriben
+
+32
+00:02:12.060 --> 00:02:14.900
+el mismo número actualizado
+en la memoria compartida.
+
+33
+00:02:15.220 --> 00:02:17.620
+Una escritura pisa por completo a la otra.
+
+34
+00:02:17.880 --> 00:02:20.660
+Este choque en el tiempo es
+una condición de carrera.
+
+35
+00:02:21.360 --> 00:02:25.710
+Como el planificador puede intercalar estos pasos
+del hardware en cualquier orden, las lecturas
+
+36
+00:02:25.760 --> 00:02:28.480
+y escrituras simples no son
+seguras con datos compartidos.
+
+37
+00:02:28.780 --> 00:02:33.550
+Para arreglarlo, necesitamos una sección crítica:
+un fragmento de código protegido que solo un
+
+38
+00:02:33.600 --> 00:02:36.740
+hilo puede ejecutar a la vez, para
+garantizar la exclusión mutua.
+
+39
+00:02:37.040 --> 00:02:42.140
+La herramienta estándar para imponer esta
+frontera es la función POSIX pthread_mutex_lock.
+
+40
+00:02:42.440 --> 00:02:46.530
+Como muestra este código, quien toma el
+cerrojo ejecuta su operación de tres pasos
+
+41
+00:02:46.580 --> 00:02:51.720
+sin interrupciones. Si llega otro hilo,
+duerme hasta que se libera el mutex.
+
+42
+00:02:52.180 --> 00:02:54.900
+Al ejecutar este código protegido
+se obtiene el resultado correcto.
+
+43
+00:02:55.080 --> 00:02:59.970
+Ahora la salida registra exactamente
+100 000 entradas vendidas, sin
+
+44
+00:03:00.020 --> 00:03:04.040
+actualizaciones perdidas. Un mutex actúa
+como un estricto cuello de botella físico.
+
+45
+00:03:04.200 --> 00:03:08.120
+Cambia la máxima velocidad en paralelo por
+la integridad garantizada de los datos.
+
+46
+00:03:08.520 --> 00:03:12.780
+Hay una alternativa estructuralmente
+distinta al cerrojo: el semáforo.
+
+47
+00:03:12.900 --> 00:03:17.330
+Un semáforo es un entero con operaciones
+atómicas por naturaleza, integradas en el
+
+48
+00:03:17.380 --> 00:03:21.890
+hardware. En vez de cerrar con llave una sección
+de código aparte para actualizar una variable, el
+
+49
+00:03:21.940 --> 00:03:24.360
+semáforo es el propio
+contador de entradas.
+
+50
+00:03:24.520 --> 00:03:28.970
+Una función como sem_trywait revisa
+el entero y le resta uno en un solo
+
+51
+00:03:29.020 --> 00:03:33.410
+paso indivisible. Usar instrucciones
+atómicas del hardware elimina por completo
+
+52
+00:03:33.460 --> 00:03:36.740
+los estados intermedios donde
+prosperan las condiciones de carrera.
+
+53
+00:03:37.320 --> 00:03:41.070
+Repasemos. ¿Qué memoria comparte un
+hilo con los demás hilos del mismo
+
+54
+00:03:41.120 --> 00:03:43.380
+proceso, y qué se guarda en privado?
+
+55
+00:03:43.660 --> 00:03:48.110
+Comparten el código, los datos globales, el montículo
+y los descriptores, pero cada uno tiene su propia
+
+56
+00:03:48.160 --> 00:03:49.940
+pila privada y sus registros.
+
+57
+00:03:50.580 --> 00:03:55.540
+Pregunta dos: ¿por qué restar una variable
+compartida en C no es una operación atómica?
+
+58
+00:03:55.880 --> 00:04:00.290
+Porque el procesador la ejecuta en
+tres pasos separados: leer, restar y
+
+59
+00:04:00.340 --> 00:04:07.800
+escribir. Ahora abre las animaciones A7.1
+y A7.4 en el aula y haz el laboratorio TD6.

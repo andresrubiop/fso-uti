@@ -1,0 +1,241 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.650
+When you type a multi-part command into
+the terminal, it feels like a single
+
+2
+00:00:07.700 --> 00:00:12.870
+seamless operation. But the shell actually
+splits this line into three distinct,
+
+3
+00:00:12.920 --> 00:00:17.810
+entirely independent programs. These
+three processes execute in user mode.
+
+4
+00:00:17.860 --> 00:00:22.390
+They sit above the strict privilege boundary,
+completely isolated from each other.
+
+5
+00:00:22.440 --> 00:00:28.450
+Down below, in kernel mode, the operating
+system creates unnamed pipes: circular memory
+
+6
+00:00:28.500 --> 00:00:34.050
+buffers used for passing data. For any
+sequence of n commands, the system builds n
+
+7
+00:00:34.100 --> 00:00:39.470
+minus 1 pipes. Right now, these programs in
+user mode and the pipes in the kernel are
+
+8
+00:00:39.520 --> 00:00:44.050
+entirely disconnected. Data cannot flow
+until they are wired together in a precise
+
+9
+00:00:44.100 --> 00:00:49.670
+sequence. A command-line pipeline is a
+complex construction project: the shell must
+
+10
+00:00:49.720 --> 00:00:54.850
+orchestrate every connection before a single
+byte moves. The shell tackles this one
+
+11
+00:00:54.900 --> 00:01:00.310
+command at a time. It begins by executing
+a pipe system call to create the very first
+
+12
+00:01:00.360 --> 00:01:05.670
+circular buffer in the kernel. Next, the
+shell executes fork, duplicating its own
+
+13
+00:01:05.720 --> 00:01:10.650
+process to create a worker for the first
+command. This child process must route its
+
+14
+00:01:10.700 --> 00:01:16.290
+output to the new channel. It uses dup2 to
+copy the pointer, replacing its standard
+
+15
+00:01:16.340 --> 00:01:20.090
+output file descriptor with a connection
+directly to the write end of the pipe.
+
+16
+00:01:20.140 --> 00:01:25.290
+Because the child inherits all open file
+descriptors from the parent, it now closes
+
+17
+00:01:25.340 --> 00:01:30.250
+any ends it will not use, severing the extra
+connections. With its output locked into
+
+18
+00:01:30.300 --> 00:01:36.270
+the pipeline, the child executes execvp:
+the shell process is replaced entirely by
+
+19
+00:01:36.320 --> 00:01:41.730
+the actual target program, ls. Back in the
+parent shell, the cleanup continues: the
+
+20
+00:01:41.780 --> 00:01:45.930
+shell closes the write end of
+the pipe it handed to the child,
+
+21
+00:01:45.980 --> 00:01:52.050
+holding on to only the read end for the next round of
+the loop. This combination of dup2 and execvp lets
+
+22
+00:01:52.100 --> 00:01:56.850
+standard programs write into kernel pipes
+blindly. ls simply writes to standard
+
+23
+00:01:56.900 --> 00:02:01.810
+output, completely unaware that the shell
+has redirected that output into a pipe. The
+
+24
+00:02:01.860 --> 00:02:06.030
+shell repeats this exact sequence for
+the rest of the commands: it spawns new
+
+25
+00:02:06.080 --> 00:02:10.910
+children, redirects their input and output
+file descriptors, and transforms them into
+
+26
+00:02:10.960 --> 00:02:17.890
+grep and wc. This leads to the golden rule
+of pipelines: every pipe must end up with
+
+27
+00:02:17.940 --> 00:02:22.410
+exactly one write descriptor and one read
+descriptor open among the two processes
+
+28
+00:02:22.460 --> 00:02:28.030
+that use it. If the parent shell or a child
+process fails to close just one unused
+
+29
+00:02:28.080 --> 00:02:33.330
+file descriptor during the loop, an extra
+writer remains attached to the pipe. When an
+
+30
+00:02:33.380 --> 00:02:37.190
+extra write descriptor stays open, the
+kernel assumes more data might arrive;
+
+31
+00:02:37.240 --> 00:02:42.150
+therefore, it never sends an end-of-file
+signal. This section of the lab manual
+
+32
+00:02:42.200 --> 00:02:47.510
+outlines an exercise where a single close
+is deliberately removed. Without an end-of-
+
+33
+00:02:47.560 --> 00:02:52.110
+file signal, the final command in the pipeline
+waits for data indefinitely, causing a
+
+34
+00:02:52.160 --> 00:02:57.810
+deadlock. Pipelines fail silently: a single
+forgotten close results in an infinite
+
+35
+00:02:57.860 --> 00:03:03.470
+wait. With all descriptors correctly wired
+and the unused ends closed, the shell steps
+
+36
+00:03:03.520 --> 00:03:08.550
+back. Data flows continuously across the
+privilege boundary, out of one process,
+
+37
+00:03:08.600 --> 00:03:13.830
+through the kernel pipe, and into the next.
+The shell's final required action is to
+
+38
+00:03:13.880 --> 00:03:18.590
+wait. It must actively track and acknowledge
+the termination of every child process;
+
+39
+00:03:18.640 --> 00:03:23.890
+if it doesn't, those finished processes
+remain in the system as zombies. To determine
+
+40
+00:03:23.940 --> 00:03:28.390
+the success or failure of the entire operation,
+the shell captures the specific exit
+
+41
+00:03:28.440 --> 00:03:32.690
+status of the very last command in the
+chain. The vertical bar you type in the
+
+42
+00:03:32.740 --> 00:03:36.470
+terminal relies entirely on rigorous
+file descriptor management and process
+
+43
+00:03:36.520 --> 00:03:41.210
+composition. Let's review. If
+a pipeline has four commands,
+
+44
+00:03:41.260 --> 00:03:43.900
+how many pipes does the
+shell create in the kernel?
+
+45
+00:03:44.280 --> 00:03:50.470
+Three. n commands always require n minus
+1 pipes. Here's the second question: what
+
+46
+00:03:50.520 --> 00:03:55.210
+happens if a parent process forgets to
+close an unused write descriptor? The final
+
+47
+00:03:55.260 --> 00:03:59.750
+command waits for an end of file that
+never comes, causing a deadlock. Now open
+
+48
+00:03:59.800 --> 00:04:04.400
+animation A5.1 in the
+course hub and run lab TD4.

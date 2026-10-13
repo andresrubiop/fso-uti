@@ -1,0 +1,267 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:09.040
+When you open a Linux terminal and
+type a command, like ls > out.txt,
+
+2
+00:00:09.240 --> 00:00:12.100
+you start a very specific chain reaction.
+
+3
+00:00:12.440 --> 00:00:16.260
+To understand how this works, we
+first need to define a process.
+
+4
+00:00:16.540 --> 00:00:20.130
+A process is a running program,
+together with its context.
+
+5
+00:00:20.180 --> 00:00:25.800
+This context includes its memory, its CPU
+registers, and its open file descriptors.
+
+6
+00:00:26.120 --> 00:00:28.660
+This diagram shows the OS architecture.
+
+7
+00:00:28.840 --> 00:00:31.750
+The shell operates in user mode,
+above the privilege boundary.
+
+8
+00:00:31.800 --> 00:00:37.250
+Below is kernel mode. To run a command,
+the shell crosses down to issue the fork
+
+9
+00:00:37.300 --> 00:00:42.290
+system call, creating a child process, an
+exact clone sharing the same memory layout
+
+10
+00:00:42.340 --> 00:00:44.180
+and open file descriptors.
+
+11
+00:00:44.640 --> 00:00:47.840
+Cloning the existing shell is the
+mandatory first step in Linux.
+
+12
+00:00:47.940 --> 00:00:51.830
+It delegates the new work to a subordinate
+process, while the original shell stays
+
+13
+00:00:51.880 --> 00:00:54.220
+running, ready to accept
+your next command.
+
+14
+00:00:54.600 --> 00:00:57.950
+We can now shift our focus
+entirely to the child process.
+
+15
+00:00:58.000 --> 00:01:03.350
+Before it actually runs the list
+command, it has to handle the > out.txt
+
+16
+00:01:03.400 --> 00:01:09.280
+redirection. This animated diagram shows
+how the child manages that text flow.
+
+17
+00:01:09.440 --> 00:01:14.710
+By issuing the dup2 system call, the child
+process modifies its own context, routing
+
+18
+00:01:14.760 --> 00:01:17.940
+the output file descriptor
+directly to the text file.
+
+19
+00:01:18.560 --> 00:01:22.700
+Next comes a crucial transformation
+using the execve system call.
+
+20
+00:01:22.780 --> 00:01:27.270
+The child process swaps out the copied shell
+code and loads the new ls program code.
+
+21
+00:01:27.320 --> 00:01:31.890
+Notice that the file descriptor pointing
+to the text file remains exactly where it
+
+22
+00:01:31.940 --> 00:01:37.310
+was. Because execve keeps those file
+descriptors intact, the ls program writes to the
+
+23
+00:01:37.360 --> 00:01:41.220
+text file automatically. It never needs
+to know its output was redirected.
+
+24
+00:01:41.940 --> 00:01:44.810
+With the code loaded, the
+process needs CPU time.
+
+25
+00:01:44.860 --> 00:01:49.990
+It will cycle through three states, ready,
+waiting for the CPU, running, actively
+
+26
+00:01:50.040 --> 00:01:53.130
+executing, and blocked if it
+has to wait for disk I/O.
+
+27
+00:01:53.180 --> 00:01:58.020
+To share the CPU, the operating
+system performs a context switch.
+
+28
+00:01:58.300 --> 00:02:01.830
+It saves the registers of the currently
+running process and loads the saved
+
+29
+00:02:01.880 --> 00:02:03.710
+registers of the next one in line.
+
+30
+00:02:03.760 --> 00:02:05.900
+The scheduler decides whose turn it is.
+
+31
+00:02:06.580 --> 00:02:12.950
+On Linux, since version 6.6, the kernel
+uses the EEVDF algorithm, which shares the
+
+32
+00:02:13.000 --> 00:02:17.640
+CPU by allocating virtual time,
+weighted by each process's priority.
+
+33
+00:02:18.320 --> 00:02:22.930
+Execve ensures your program runs with the
+correct file setup, and the scheduler's
+
+34
+00:02:22.980 --> 00:02:26.100
+rapid context switches
+let it share the CPU.
+
+35
+00:02:26.580 --> 00:02:30.550
+This allows your redirected command to
+execute smoothly alongside the rest of the
+
+36
+00:02:30.600 --> 00:02:35.750
+operating system. Eventually, the ls command
+finishes reading the directory and ends
+
+37
+00:02:35.800 --> 00:02:39.460
+its execution. But the process
+doesn't vanish completely.
+
+38
+00:02:39.540 --> 00:02:43.270
+Its process control block,
+or PCB, stays in memory.
+
+39
+00:02:43.320 --> 00:02:45.060
+The process is now a zombie.
+
+40
+00:02:45.340 --> 00:02:49.170
+The PCB stays intact so the parent
+shell can issue the wait system call.
+
+41
+00:02:49.220 --> 00:02:53.920
+Once it collects the final exit status,
+the kernel removes the zombie PCB.
+
+42
+00:02:54.320 --> 00:02:57.720
+That exit status provides exact
+details of the termination.
+
+43
+00:02:57.880 --> 00:03:02.370
+It tells the parent whether the program
+exited cleanly or if it crashed, perhaps due
+
+44
+00:03:02.420 --> 00:03:04.380
+to a page fault triggering a signal.
+
+45
+00:03:04.600 --> 00:03:08.040
+In this terminal output, you can
+see an example of crash data.
+
+46
+00:03:08.160 --> 00:03:13.690
+An exit status of 139 indicates the process
+was killed by a segmentation fault, or
+
+47
+00:03:13.740 --> 00:03:18.320
+SIGSEGV, which is signal 11 added
+to the shell convention of 128.
+
+48
+00:03:18.600 --> 00:03:22.340
+Every command you run follows
+this strict chronological cycle.
+
+49
+00:03:22.480 --> 00:03:27.190
+It clones an existing process, transforms
+its code, shares the CPU through the
+
+50
+00:03:27.240 --> 00:03:30.340
+scheduler, and ends by reporting
+its status to the kernel.
+
+51
+00:03:30.720 --> 00:03:35.250
+Let's review. Which system call replaces
+the process's program while keeping its
+
+52
+00:03:35.300 --> 00:03:36.480
+file descriptors?
+
+53
+00:03:38.520 --> 00:03:43.290
+execve. What is the state of a process
+that has ended but its parent has not yet
+
+54
+00:03:43.340 --> 00:03:44.300
+called wait?
+
+55
+00:03:46.380 --> 00:03:53.720
+Zombie. Now open animations A4.3 and
+A4.4 in the course hub, and run lab TD3.

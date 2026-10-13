@@ -1,0 +1,355 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.060
+Imagine you run a simple client program.
+
+2
+00:00:06.180 --> 00:00:10.330
+Almost instantly, it reaches across the
+network and establishes a successful
+
+3
+00:00:10.380 --> 00:00:13.940
+connection. But over on the
+server machine, there is a delay.
+
+4
+00:00:14.300 --> 00:00:18.230
+The server's code is still initializing
+and hasn't even reached the line of code
+
+5
+00:00:18.280 --> 00:00:20.260
+meant to accept new connections.
+
+6
+00:00:20.760 --> 00:00:26.210
+So, if the server application hasn't
+explicitly accepted the connection yet, who or
+
+7
+00:00:26.260 --> 00:00:28.580
+what actually answered the call?
+
+8
+00:00:29.240 --> 00:00:34.130
+To solve this timing mystery, we have to
+look at how networking operates in a hidden
+
+9
+00:00:34.180 --> 00:00:38.720
+layer of the system, mediated by a
+specific endpoint called a socket.
+
+10
+00:00:39.240 --> 00:00:41.980
+A socket is the endpoint
+of a communication.
+
+11
+00:00:42.340 --> 00:00:46.580
+When a program creates one, the operating
+system returns a file descriptor.
+
+12
+00:00:46.860 --> 00:00:52.050
+You use this descriptor with basic system
+calls like read, write, and close exactly
+
+13
+00:00:52.100 --> 00:00:55.600
+as you would with a pipe.
+Sockets come in different types.
+
+14
+00:00:55.840 --> 00:00:59.580
+A connectionless protocol like
+UDP sends independent datagrams.
+
+15
+00:01:00.060 --> 00:01:01.920
+It behaves like sending a telegram.
+
+16
+00:01:02.140 --> 00:01:05.480
+Data can be lost, duplicated,
+or arrive out of order.
+
+17
+00:01:05.720 --> 00:01:07.260
+And neither side gets an error.
+
+18
+00:01:07.760 --> 00:01:11.520
+Then there is TCP. This
+is a connected protocol.
+
+19
+00:01:11.800 --> 00:01:16.350
+Once the connection is set up, it guarantees
+a reliable, ordered byte stream between
+
+20
+00:01:16.400 --> 00:01:20.890
+the two machines. Since our opening
+mystery involves a successful, guaranteed
+
+21
+00:01:20.940 --> 00:01:23.900
+connection, these machines are using TCP.
+
+22
+00:01:24.220 --> 00:01:28.170
+A formal connection setup happened behind
+the scenes, completely independent of the
+
+23
+00:01:28.220 --> 00:01:32.780
+server application. Let's look at the
+structure of the operating system.
+
+24
+00:01:33.080 --> 00:01:36.940
+The server process runs in user
+mode, above the privilege boundary.
+
+25
+00:01:37.120 --> 00:01:41.380
+The core of the system, the kernel,
+operates in the restricted space below.
+
+26
+00:01:41.740 --> 00:01:45.350
+To start, the server process
+creates a socket and calls bind.
+
+27
+00:01:45.400 --> 00:01:50.130
+This pushes a request down to the kernel
+to assign that socket a specific network
+
+28
+00:01:50.180 --> 00:01:54.600
+address and a local port. But
+there is a hardware conflict here.
+
+29
+00:01:55.020 --> 00:02:00.470
+An x86-64 processor stores numbers in
+little-endian order, reading bytes back to
+
+30
+00:02:00.520 --> 00:02:04.880
+front. The network protocol
+strictly requires big-endian order.
+
+31
+00:02:05.000 --> 00:02:10.270
+If a programmer forgets to use the htons
+function to translate the bytes, a severe
+
+32
+00:02:10.320 --> 00:02:17.190
+bug occurs. The processor reverses the
+bytes of port 7000, which is hex 1B58, and
+
+33
+00:02:17.240 --> 00:02:21.300
+the server accidentally
+binds to port 22555 instead.
+
+34
+00:02:21.700 --> 00:02:26.310
+This mandatory data translation shows that
+the application relies entirely on the
+
+35
+00:02:26.360 --> 00:02:30.890
+kernel's network stack. It must format its
+requests to match the exact standards the
+
+36
+00:02:30.940 --> 00:02:35.950
+kernel expects. Once the address is properly
+bound, the server application calls
+
+37
+00:02:36.000 --> 00:02:40.630
+listen. This sets the socket to a passive
+state, signaling the kernel to monitor
+
+38
+00:02:40.680 --> 00:02:42.600
+that port for incoming traffic.
+
+39
+00:02:42.900 --> 00:02:46.990
+Over on the remote machine, the client
+application creates its own socket and sends
+
+40
+00:02:47.040 --> 00:02:49.800
+a connect request targeting
+the server's address.
+
+41
+00:02:50.120 --> 00:02:52.460
+Now we return to our initial mystery.
+
+42
+00:02:52.700 --> 00:02:56.270
+The server's kernel receives this
+request below the privilege boundary.
+
+43
+00:02:56.320 --> 00:02:58.840
+It does not wake up the
+server application yet.
+
+44
+00:02:58.940 --> 00:03:01.370
+Instead, the two kernels
+communicate directly.
+
+45
+00:03:01.420 --> 00:03:04.520
+They perform the TCP 3-way handshake.
+
+46
+00:03:04.800 --> 00:03:09.280
+SYN from the client, SYN-ACK from the
+server, and a final ACK from the client.
+
+47
+00:03:09.520 --> 00:03:13.390
+Once finished, the server's kernel places
+the established connection into an accept
+
+48
+00:03:13.440 --> 00:03:17.800
+queue. When the server application
+is finally ready, it calls accept.
+
+49
+00:03:17.960 --> 00:03:20.670
+It does not execute the
+network handshake itself.
+
+50
+00:03:20.720 --> 00:03:23.620
+It simply pulls that waiting
+connection out of the queue.
+
+51
+00:03:23.860 --> 00:03:28.110
+The accept function takes that established
+connection and returns a brand new file
+
+52
+00:03:28.160 --> 00:03:32.810
+descriptor. This new descriptor is dedicated
+exclusively to talking to that specific
+
+53
+00:03:32.860 --> 00:03:36.400
+client, while the original socket
+keeps listening for others.
+
+54
+00:03:36.840 --> 00:03:40.740
+When the communication ends, closing
+the connection is a symmetric process.
+
+55
+00:03:40.920 --> 00:03:43.580
+It begins the moment
+either side calls close.
+
+56
+00:03:43.960 --> 00:03:48.030
+The system that initiates the close goes
+through a specific sequence and enters a
+
+57
+00:03:48.080 --> 00:03:49.760
+state called TIME_WAIT.
+
+58
+00:03:49.900 --> 00:03:54.150
+This acts as a safety buffer to catch
+any stray, delayed network packets still
+
+59
+00:03:54.200 --> 00:03:55.310
+traveling across the internet.
+
+60
+00:03:55.360 --> 00:04:00.590
+On Linux, this specific TIME_WAIT entry
+survives in the kernel for 60 seconds
+
+61
+00:04:00.640 --> 00:04:02.550
+after the program itself ends.
+
+62
+00:04:02.600 --> 00:04:05.380
+This causes a common development problem.
+
+63
+00:04:05.620 --> 00:04:11.150
+If you stop the server code and restart it
+immediately, it crashes with an EADDRINUSE
+
+64
+00:04:11.200 --> 00:04:15.920
+error. The port fails to bind because
+the kernel still has it locked.
+
+65
+00:04:16.240 --> 00:04:21.590
+To solve this, the programmer must
+explicitly set the SO_REUSEADDR flag before
+
+66
+00:04:21.640 --> 00:04:25.520
+binding. This proves the
+overarching rule of sockets.
+
+67
+00:04:25.840 --> 00:04:30.070
+From the first handshake to the final
+close, the kernel controls the lifecycle of
+
+68
+00:04:30.120 --> 00:04:32.280
+the port. Not the application.
+
+69
+00:04:33.220 --> 00:04:37.150
+Question one. What function returns a
+new file descriptor for an established
+
+70
+00:04:37.200 --> 00:04:40.600
+connection? The function
+that does this is accept.
+
+71
+00:04:41.400 --> 00:04:45.640
+Question two. Which layer completes
+the TCP three-way handshake?
+
+72
+00:04:45.800 --> 00:04:47.580
+The application or the kernel?
+
+73
+00:04:47.980 --> 00:04:50.460
+The layer that completes it is the kernel.
+
+74
+00:04:50.880 --> 00:04:56.260
+Now open animation A8.1 in the
+course hub and run lab TD7.

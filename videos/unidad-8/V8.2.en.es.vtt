@@ -1,0 +1,309 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.550
+Un servidor de red vive en
+un equilibrio constante.
+
+2
+00:00:06.600 --> 00:00:10.930
+Tiene que atender datos de
+cientos de conexiones a la vez sin
+
+3
+00:00:10.980 --> 00:00:14.080
+dejar que un cliente lento
+atasque todo el sistema.
+
+4
+00:00:14.500 --> 00:00:17.040
+Podemos medir este problema
+en el laboratorio TD7.
+
+5
+00:00:17.380 --> 00:00:20.480
+Enviamos 32 clientes a la
+vez a un servidor web.
+
+6
+00:00:21.000 --> 00:00:25.430
+24 envían sus peticiones al instante,
+pero ocho son lentos a propósito
+
+7
+00:00:25.480 --> 00:00:27.980
+y tardan un segundo entero
+en transmitir sus datos.
+
+8
+00:00:28.420 --> 00:00:30.760
+Empezamos con un modelo
+de servidor iterativo.
+
+9
+00:00:30.840 --> 00:00:35.920
+Funciona con un solo hilo y procesa
+exactamente una conexión a la vez.
+
+10
+00:00:36.160 --> 00:00:39.990
+Mientras el servidor está ocupado con el primer
+cliente, las otras 31 conexiones completan
+
+11
+00:00:40.040 --> 00:00:41.340
+su saludo de tres vías.
+
+12
+00:00:41.620 --> 00:00:45.510
+El núcleo marca su conexión como establecida,
+pero quedan atrapadas esperando en
+
+13
+00:00:45.560 --> 00:00:47.620
+la cola de aceptación
+del socket que escucha.
+
+14
+00:00:48.000 --> 00:00:50.780
+Esta salida de la terminal muestra
+el resultado de ese retraso.
+
+15
+00:00:51.040 --> 00:00:56.450
+Nuestros clientes rápidos esperan una mediana de
+982 milisegundos solo para recibir respuesta,
+
+16
+00:00:56.500 --> 00:00:58.900
+simplemente porque están
+atascados detrás de los lentos.
+
+17
+00:00:59.100 --> 00:01:03.600
+En un modelo iterativo, el servidor solo
+puede ir tan rápido como su cliente más lento.
+
+18
+00:01:03.780 --> 00:01:08.640
+La CPU se queda ociosa mientras espera datos de la
+red y desperdicia una capacidad de proceso valiosa.
+
+19
+00:01:09.140 --> 00:01:13.250
+Para vaciar esa cola, el servidor puede
+crear un proceso nuevo por cada conexión
+
+20
+00:01:13.300 --> 00:01:15.600
+llamando a fork justo después de accept.
+
+21
+00:01:15.840 --> 00:01:17.500
+Así se aísla la carga de trabajo.
+
+22
+00:01:17.680 --> 00:01:21.810
+El nuevo proceso hijo atiende al cliente,
+y el proceso padre queda libre para volver
+
+23
+00:01:21.860 --> 00:01:24.080
+al bucle de inmediato y
+aceptar la siguiente llegada.
+
+24
+00:01:24.380 --> 00:01:26.520
+Pero esto añade trabajo administrativo.
+
+25
+00:01:26.660 --> 00:01:31.010
+El servidor necesita un manejador de SIGCHLD para
+recoger a los procesos hijos cuando terminan
+
+26
+00:01:31.060 --> 00:01:33.700
+y evitar que se conviertan en
+zombis que consumen recursos.
+
+27
+00:01:34.320 --> 00:01:38.790
+Aislar procesos mantiene en marcha a los
+clientes rápidos, pero crear un proceso cuesta
+
+28
+00:01:38.840 --> 00:01:42.180
+varias veces más memoria del
+sistema que crear un hilo.
+
+29
+00:01:42.520 --> 00:01:45.940
+Podemos cambiar el proceso hijo
+por un hilo nuevo por conexión.
+
+30
+00:01:46.080 --> 00:01:49.640
+Es más barato de crear y
+aprovecha la memoria compartida.
+
+31
+00:01:49.920 --> 00:01:52.800
+Pero este enfoque choca
+con un límite físico.
+
+32
+00:01:52.940 --> 00:01:57.510
+Si un servidor recibe 10 000 conexiones
+simultáneas, tiene que mantener 10 000 hilos
+
+33
+00:01:57.560 --> 00:02:00.760
+y sus pilas de memoria, lo que
+agota rápidamente la máquina.
+
+34
+00:02:01.080 --> 00:02:04.380
+Un grupo de hilos ofrece un término
+medio con recursos acotados.
+
+35
+00:02:04.660 --> 00:02:07.580
+El servidor crea un número
+fijo de hilos al arrancar.
+
+36
+00:02:07.880 --> 00:02:11.700
+Estos hilos actúan como consumidores y sacan
+las conexiones activas de una cola compartida.
+
+37
+00:02:12.020 --> 00:02:15.910
+Lancemos nuestros ocho clientes lentos
+contra un grupo acotado de exactamente ocho
+
+38
+00:02:15.960 --> 00:02:20.060
+hilos. Los clientes lentos ocupan
+todos los hilos disponibles a la vez.
+
+39
+00:02:20.340 --> 00:02:24.250
+Como tardan un segundo entero en terminar
+sus peticiones, el grupo se satura
+
+40
+00:02:24.300 --> 00:02:28.720
+por completo. Los 24 clientes
+rápidos no pueden entrar.
+
+41
+00:02:29.180 --> 00:02:32.610
+En la salida del modelo con grupo de hilos
+vemos que los clientes rápidos vuelven a
+
+42
+00:02:32.660 --> 00:02:38.610
+quedar atrapados. Su espera mediana se dispara
+a 981 milisegundos, lo que anula por completo
+
+43
+00:02:38.660 --> 00:02:40.780
+la ventaja de velocidad del multihilo.
+
+44
+00:02:41.120 --> 00:02:44.730
+Los grupos de hilos evitan quedarse sin
+memoria, pero fallan cuando el número
+
+45
+00:02:44.780 --> 00:02:47.320
+de clientes lentos iguala
+el tamaño del grupo.
+
+46
+00:02:47.640 --> 00:02:51.680
+Un servidor robusto necesita una arquitectura
+que nunca se bloquee por un cliente lento,
+
+47
+00:02:51.820 --> 00:02:54.220
+sin crear hilos sin fin para compensar.
+
+48
+00:02:54.820 --> 00:02:56.760
+La solución es el bucle de eventos.
+
+49
+00:02:57.300 --> 00:03:01.110
+Un solo hilo eficiente atiende a todos
+los clientes y solo trata con los sockets
+
+50
+00:03:01.160 --> 00:03:06.170
+que están transmitiendo. Con la llamada al
+sistema epoll_wait, el hilo le pregunta al núcleo
+
+51
+00:03:06.220 --> 00:03:09.440
+qué sockets tienen datos
+y salta solo a esos.
+
+52
+00:03:09.660 --> 00:03:14.030
+Al ignorar las conexiones inactivas, el hilo
+nunca pierde un milisegundo esperando a que
+
+53
+00:03:14.080 --> 00:03:16.660
+un cliente lento termine
+de formular su petición.
+
+54
+00:03:17.020 --> 00:03:20.040
+Este último bloque de salida de la
+terminal demuestra la eficiencia.
+
+55
+00:03:20.320 --> 00:03:25.170
+Con exactamente la misma carga, el bucle de
+eventos procesa los 24 clientes rápidos en solo uno
+
+56
+00:03:25.220 --> 00:03:28.940
+o dos milisegundos, sin que le afecten
+en absoluto los ocho clientes lentos.
+
+57
+00:03:29.240 --> 00:03:31.920
+El bucle de eventos
+resuelve el problema C10K.
+
+58
+00:03:32.120 --> 00:03:35.360
+Permite una concurrencia masiva con
+un costo mínimo para el sistema.
+
+59
+00:03:35.820 --> 00:03:40.200
+Repasemos. ¿Qué le pasa a una conexión
+nueva si un servidor iterativo está ocupado?
+
+60
+00:03:40.380 --> 00:03:42.280
+Espera en la cola de
+aceptación del socket.
+
+61
+00:03:42.620 --> 00:03:45.140
+¿Por qué un grupo de hilos
+sufre con los clientes lentos?
+
+62
+00:03:45.300 --> 00:03:50.860
+Si los clientes lentos igualan el número
+de hilos, el grupo se satura por completo.
+
+63
+00:03:51.340 --> 00:03:58.360
+Ahora abre la animación A8.2, modelos de
+servidor, en el aula y haz el laboratorio TD7.

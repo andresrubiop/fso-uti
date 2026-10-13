@@ -1,0 +1,257 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.750
+¿Alguna vez un programa se te quedó atascado
+en la terminal y pulsaste Ctrl-C para matarlo?
+
+2
+00:00:07.800 --> 00:00:10.640
+Esa parada instantánea parece magia.
+
+3
+00:00:10.720 --> 00:00:13.500
+Pero depende de un mecanismo muy concreto.
+
+4
+00:00:14.000 --> 00:00:18.100
+Cuando pulsas esas teclas, la terminal
+envía una señal al proceso en ejecución.
+
+5
+00:00:18.380 --> 00:00:22.780
+Es una notificación asíncrona que
+le dice al programa que actúe ya.
+
+6
+00:00:23.020 --> 00:00:25.040
+El principal emisor es el núcleo.
+
+7
+00:00:25.300 --> 00:00:29.390
+Si tu programa accede a memoria prohibida,
+el núcleo lanza la señal SIGSEGV para
+
+8
+00:00:29.440 --> 00:00:34.190
+terminarlo. Envía SIGPIPE cuando se escribe
+en una tubería sin lector, o SIGCHLD
+
+9
+00:00:34.240 --> 00:00:35.800
+cuando termina un proceso hijo.
+
+10
+00:00:36.040 --> 00:00:39.690
+Y un proceso puede enviarle una señal
+directamente a otro con la llamada al sistema
+
+11
+00:00:39.740 --> 00:00:44.690
+kill. Las señales son la forma estándar con la
+que el sistema obliga a un proceso a reaccionar a
+
+12
+00:00:44.740 --> 00:00:48.750
+eventos externos. Pero recibir una señal
+no significa que tu programa tenga que
+
+13
+00:00:48.800 --> 00:00:52.800
+estrellarse en el acto. Cuando llega
+una señal, tu proceso tiene opciones.
+
+14
+00:00:53.060 --> 00:00:57.430
+Puede aceptar la acción por omisión, ignorar
+la señal por completo o capturarla con
+
+15
+00:00:57.480 --> 00:01:00.100
+sigaction para ejecutar una
+función manejadora propia.
+
+16
+00:01:00.560 --> 00:01:03.420
+Pero esta libertad tiene
+un límite estricto.
+
+17
+00:01:03.880 --> 00:01:07.850
+SIGKILL y SIGSTOP representan la autoridad
+última del administrador del sistema sobre el
+
+18
+00:01:07.900 --> 00:01:12.930
+hardware. Como explica el manual, estas
+dos señales nunca pueden capturarse,
+
+19
+00:01:12.980 --> 00:01:16.720
+ignorarse ni bloquearse, se programe
+como se programe el proceso.
+
+20
+00:01:17.040 --> 00:01:20.790
+Puedes programar una respuesta propia para
+casi cualquier interrupción, pero el núcleo
+
+21
+00:01:20.840 --> 00:01:24.160
+conserva el poder absoluto de
+pausar o terminar tu código.
+
+22
+00:01:24.460 --> 00:01:27.640
+Es clave saber cuándo hace
+efecto realmente una señal.
+
+23
+00:01:28.160 --> 00:01:31.460
+Llamar a kill no ejecuta la
+interrupción al instante.
+
+24
+00:01:31.540 --> 00:01:34.500
+Solo marca la señal como
+pendiente dentro del núcleo.
+
+25
+00:01:34.840 --> 00:01:38.170
+El núcleo espera a entregar la señal
+pendiente hasta que el proceso vuelve a cruzar
+
+26
+00:01:38.220 --> 00:01:41.460
+al modo usuario, por ejemplo,
+después de un cambio de contexto.
+
+27
+00:01:41.640 --> 00:01:46.190
+Y si tu proceso está detenido, las
+señales que lleguen, como SIGUSR1,
+
+28
+00:01:46.240 --> 00:01:48.320
+no se pierden. Simplemente
+quedan bloqueadas.
+
+29
+00:01:48.680 --> 00:01:52.330
+Esa señal bloqueada espera a salvo en una
+cola, con paciencia, hasta que el proceso
+
+30
+00:01:52.380 --> 00:01:55.220
+recibe la señal SIGCONT
+y reanuda su ejecución.
+
+31
+00:01:55.580 --> 00:01:58.180
+Las señales no se esfuman en el vacío.
+
+32
+00:01:58.680 --> 00:02:02.130
+Tener en cuenta estas entregas diferidas
+te ayuda a escribir software predecible
+
+33
+00:02:02.180 --> 00:02:06.730
+y estable. Como un manejador propio
+puede pausar tu programa en cualquier
+
+34
+00:02:06.780 --> 00:02:10.910
+milisegundo, tienes que seguir reglas
+estrictas para no corromper tu propia
+
+35
+00:02:10.960 --> 00:02:16.450
+memoria. Dentro de un manejador solo puedes
+usar funciones seguras ante señales asíncronas,
+
+36
+00:02:16.500 --> 00:02:18.220
+como la llamada al sistema write.
+
+37
+00:02:18.320 --> 00:02:23.090
+No puedes usar printf. Si llega una señal
+cuando el programa principal va por la mitad
+
+38
+00:02:23.140 --> 00:02:27.410
+del llenado de un búfer de printf, tu
+manejador volverá a entrar en ese mismo búfer
+
+39
+00:02:27.460 --> 00:02:29.620
+y destrozará por completo la salida.
+
+40
+00:02:29.980 --> 00:02:33.300
+Este momento preciso crea una
+condición de carrera clásica.
+
+41
+00:02:33.760 --> 00:02:37.270
+Imagina que tu programa revisa una
+variable, ve que tiene que esperar y llama
+
+42
+00:02:37.320 --> 00:02:41.810
+a pause. Si una señal llega en el instante microscópico
+antes de dormirse, el manejador se ejecuta
+
+43
+00:02:41.860 --> 00:02:46.540
+antes de tiempo. Luego el proceso duerme para
+siempre, esperando una señal que ya recibió.
+
+44
+00:02:46.860 --> 00:02:48.920
+La solución es un orden estricto.
+
+45
+00:02:49.050 --> 00:02:53.730
+Primero bloqueas la señal con sigprocmask,
+revisas tu condición con seguridad y luego
+
+46
+00:02:53.780 --> 00:02:58.350
+llamas a sigsuspend. sigsuspend funciona porque
+reemplaza la máscara y duerme el proceso
+
+47
+00:02:58.400 --> 00:03:01.400
+en una sola operación atómica.
+
+48
+00:03:01.560 --> 00:03:04.500
+El núcleo garantiza que ninguna
+señal se cuele por las rendijas.
+
+49
+00:03:04.860 --> 00:03:08.600
+Repasemos. ¿Qué dos señales nunca
+pueden capturarse ni ignorarse?
+
+50
+00:03:09.040 --> 00:03:11.860
+Las respuestas exactas
+son SIGKILL y SIGSTOP.
+
+51
+00:03:12.080 --> 00:03:16.380
+¿Por qué hay que usar sigsuspend en vez
+de revisar una variable y luego dormirse?
+
+52
+00:03:16.500 --> 00:03:20.660
+Para evitar la condición de carrera en la
+que la señal llega justo antes de dormirse.
+
+53
+00:03:21.060 --> 00:03:26.240
+Ahora abre la animación A6.1 en
+el aula y haz el laboratorio TD5.

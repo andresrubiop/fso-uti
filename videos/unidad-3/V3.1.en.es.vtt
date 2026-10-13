@@ -1,0 +1,244 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.240
+En Linux hay una filosofía de diseño
+que lo unifica todo: todo es un archivo.
+
+2
+00:00:08.700 --> 00:00:13.330
+El sistema operativo usa exactamente
+la misma interfaz, ya sea un archivo
+
+3
+00:00:13.380 --> 00:00:20.360
+normal, un directorio, un dispositivo de caracteres
+o de bloques, una tubería, una FIFO o un socket.
+
+4
+00:00:20.960 --> 00:00:25.790
+Como usuarios, tratamos con todos estos elementos
+mediante nombres de texto conocidos y legibles,
+
+5
+00:00:25.840 --> 00:00:31.630
+como notas.txt. Pero si miras dentro de la
+estructura de metadatos central de cualquier
+
+6
+00:00:31.680 --> 00:00:37.310
+archivo, el inodo, notarás una ausencia
+sorprendente: el nombre del archivo no aparece
+
+7
+00:00:37.360 --> 00:00:42.470
+por ningún lado. Si el archivo no guarda
+su propio nombre, ¿dónde vive exactamente
+
+8
+00:00:42.520 --> 00:00:47.230
+ese texto? ¿Y cómo encuentra el núcleo
+los datos físicos en el disco cuando
+
+9
+00:00:47.280 --> 00:00:52.750
+se los pides? Para el núcleo, la verdadera
+identidad de un archivo es su inodo,
+
+10
+00:00:52.800 --> 00:00:55.140
+que se reconoce solo por un número único.
+
+11
+00:00:55.660 --> 00:00:59.900
+Los sistemas Unix separan a propósito el
+contenido de un archivo de sus metadatos.
+
+12
+00:01:00.780 --> 00:01:05.680
+Dentro del inodo, el núcleo guarda el
+tipo de archivo, los permisos de acceso,
+
+13
+00:01:05.820 --> 00:01:12.020
+el dueño, el tamaño total y cuatro marcas de
+tiempo: acceso, modificación, cambio y creación.
+
+14
+00:01:12.580 --> 00:01:15.080
+Fíjate en que no hay ningún
+campo para el nombre.
+
+15
+00:01:15.520 --> 00:01:20.290
+El inodo también guarda extents: punteros que
+le dicen al sistema de archivos exactamente
+
+16
+00:01:20.340 --> 00:01:25.210
+dónde están los tramos contiguos de bloques
+de datos de 4 kilobytes en la partición ext4
+
+17
+00:01:25.260 --> 00:01:29.820
+del disco. El nombre que falta vive,
+en realidad, dentro de un directorio.
+
+18
+00:01:30.040 --> 00:01:34.290
+Un directorio es simplemente otro archivo,
+pero sus datos forman una lista de nombres
+
+19
+00:01:34.340 --> 00:01:37.180
+de texto, cada uno con su número de inodo.
+
+20
+00:01:37.360 --> 00:01:42.310
+También tiene una entrada para sí mismo, marcada
+con un punto, y otra para su padre, marcada con
+
+21
+00:01:42.360 --> 00:01:47.230
+dos puntos. Un directorio es solo
+un mapa: traduce cadenas de texto
+
+22
+00:01:47.280 --> 00:01:51.310
+cómodas para las personas a los números de
+inodo que el núcleo necesita para buscar tus
+
+23
+00:01:51.360 --> 00:01:56.370
+datos. Sigamos los pasos exactos que da el
+núcleo para resolver una ruta absoluta,
+
+24
+00:01:56.420 --> 00:01:59.760
+como /home/student/notas.txt.
+
+25
+00:02:00.360 --> 00:02:02.590
+El proceso empieza en el inodo raíz.
+
+26
+00:02:02.640 --> 00:02:06.830
+El núcleo lee la tabla de este directorio,
+recorre las entradas de texto y busca
+
+27
+00:02:06.880 --> 00:02:09.160
+el número de inodo de la cadena home.
+
+28
+00:02:10.200 --> 00:02:15.090
+Luego pasa al inodo de home, lee su tabla
+de directorio y encuentra la entrada
+
+29
+00:02:15.140 --> 00:02:20.460
+de student. Ya en el inodo de student,
+el núcleo lee una última tabla.
+
+30
+00:02:20.680 --> 00:02:25.740
+Ahí encuentra notas.txt y saca
+el número de inodo de destino.
+
+31
+00:02:26.120 --> 00:02:30.670
+Este recorrido componente por componente es
+el puente obligatorio que une la abstracción
+
+32
+00:02:30.720 --> 00:02:34.740
+de una ruta en modo usuario con
+la realidad física del disco.
+
+33
+00:02:35.100 --> 00:02:39.370
+Como el nombre está totalmente separado
+de los datos físicos, un mismo archivo
+
+34
+00:02:39.420 --> 00:02:41.680
+puede tener varios nombres independientes.
+
+35
+00:02:41.840 --> 00:02:47.420
+Eso es un enlace duro: una nueva entrada
+de directorio que apunta al mismo inodo.
+
+36
+00:02:47.500 --> 00:02:52.460
+El inodo cuenta cuántos nombres
+apuntan a él con el contador st_nlink.
+
+37
+00:02:52.600 --> 00:02:56.750
+El núcleo solo libera los bloques de datos
+cuando llega a cero y ningún proceso tiene
+
+38
+00:02:56.800 --> 00:02:59.960
+el archivo abierto. Un enlace
+simbólico funciona distinto.
+
+39
+00:03:00.300 --> 00:03:04.730
+Como se ve en esta salida de la terminal, un
+enlace simbólico es un inodo totalmente nuevo.
+
+40
+00:03:04.780 --> 00:03:10.070
+La salida muestra que atajo tiene
+un número de inodo distinto,
+
+41
+00:03:10.120 --> 00:03:16.240
+12190687, diferente del del
+archivo original, 12190686.
+
+42
+00:03:16.960 --> 00:03:20.500
+Su contenido es solo una ruta de
+texto que apunta a otro lugar.
+
+43
+00:03:21.140 --> 00:03:25.750
+El sistema de archivos de Linux no es un conjunto
+rígido de carpetas, sino una red flexible
+
+44
+00:03:25.800 --> 00:03:29.840
+de punteros que une nombres
+legibles con identidades físicas.
+
+45
+00:03:30.320 --> 00:03:33.620
+Repasemos. ¿Un inodo contiene
+el nombre del archivo?
+
+46
+00:03:35.700 --> 00:03:39.500
+No, el nombre vive en la entrada de
+directorio, que apunta al inodo.
+
+47
+00:03:39.920 --> 00:03:43.000
+¿Qué diferencia hay entre un
+enlace duro y un enlace simbólico?
+
+48
+00:03:45.120 --> 00:03:49.650
+Un enlace duro apunta directamente al mismo
+inodo; un enlace simbólico es un inodo
+
+49
+00:03:49.700 --> 00:03:51.330
+aparte cuyo contenido es una ruta.
+
+50
+00:03:51.380 --> 00:03:57.040
+Ahora abre la animación A3.1 en
+el aula y haz el laboratorio TD2.

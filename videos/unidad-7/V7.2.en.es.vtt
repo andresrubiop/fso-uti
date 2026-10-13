@@ -1,0 +1,320 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.960
+Un hilo es una ejecución
+secuencial dentro de un proceso.
+
+2
+00:00:07.320 --> 00:00:11.010
+Como los hilos comparten el mismo espacio
+de direcciones, pueden pasarse datos
+
+3
+00:00:11.060 --> 00:00:16.530
+muy rápido. Lo vemos dentro de un proceso
+que corre en modo usuario, trabajando
+
+4
+00:00:16.580 --> 00:00:20.910
+de forma segura encima de la frontera de privilegios
+del núcleo, con un área compartida llamada búfer
+
+5
+00:00:20.960 --> 00:00:25.860
+acotado. Una forma clásica de mover datos
+aquí es el modelo productor-consumidor.
+
+6
+00:00:26.340 --> 00:00:30.290
+Los productores generan datos y los ponen en
+el búfer, mientras los consumidores los leen y
+
+7
+00:00:30.340 --> 00:00:34.160
+los procesan. Para coordinarse,
+usan dos semáforos.
+
+8
+00:00:34.500 --> 00:00:38.530
+Antes de escribir, un productor revisa un semáforo
+llamado empty, que empieza en el número total de
+
+9
+00:00:38.580 --> 00:00:43.510
+celdas del búfer. Antes de leer, un consumidor
+revisa un semáforo llamado full, que empieza en
+
+10
+00:00:43.560 --> 00:00:46.840
+cero. Si hay espacio, el
+productor puede escribir.
+
+11
+00:00:47.040 --> 00:00:51.170
+Pero para evitar una condición de carrera
+al actualizar la misma posición, usan un
+
+12
+00:00:51.220 --> 00:00:54.520
+mutex, que bloquea el índice compartido
+para tener acceso exclusivo.
+
+13
+00:00:55.140 --> 00:00:59.330
+Cuando termina el trabajo, el programa principal
+puede enviar una píldora venenosa: un valor
+
+14
+00:00:59.380 --> 00:01:03.840
+concreto que viaja por el búfer y avisa a todos
+los hilos de que deben terminar ordenadamente.
+
+15
+00:01:04.280 --> 00:01:08.540
+Este sistema funciona a la perfección porque
+el flujo de recursos es totalmente lineal.
+
+16
+00:01:08.820 --> 00:01:10.580
+Los datos solo se mueven en un sentido.
+
+17
+00:01:11.020 --> 00:01:15.150
+Pero los sistemas se rompen enseguida cuando
+los hilos necesitan bloquear varios recursos
+
+18
+00:01:15.200 --> 00:01:19.760
+a la vez. Podemos modelar este problema
+con cinco filósofos comensales.
+
+19
+00:01:20.120 --> 00:01:21.900
+Se sientan a una mesa redonda.
+
+20
+00:01:22.080 --> 00:01:26.230
+Entre cada par de filósofos hay un solo
+palillo, y cada palillo está protegido
+
+21
+00:01:26.280 --> 00:01:29.080
+por un pthread_mutex_lock.
+
+22
+00:01:29.440 --> 00:01:32.540
+Para comer, un filósofo
+necesita dos palillos.
+
+23
+00:01:32.880 --> 00:01:37.050
+En nuestro sistema, esto representa un
+hilo que necesita acceso exclusivo a dos
+
+24
+00:01:37.100 --> 00:01:40.120
+recursos distintos a la
+vez para hacer su trabajo.
+
+25
+00:01:40.680 --> 00:01:45.310
+Empieza el proceso. Cada filósofo
+estira la mano y usa con éxito
+
+26
+00:01:45.360 --> 00:01:48.660
+pthread_mutex_lock para tomar
+el palillo de su derecha.
+
+27
+00:01:48.900 --> 00:01:51.980
+Pero al ir por el palillo de la
+izquierda, chocan con un muro.
+
+28
+00:01:52.160 --> 00:01:53.900
+Ya lo tiene su vecino.
+
+29
+00:01:54.100 --> 00:01:56.680
+Todos los filósofos se duermen esperando.
+
+30
+00:01:56.960 --> 00:02:01.750
+La mesa se congela. Esta salida de la terminal
+muestra exactamente lo que pasa al ejecutar este
+
+31
+00:02:01.800 --> 00:02:03.200
+código en el equipo del curso.
+
+32
+00:02:03.440 --> 00:02:05.960
+Los hilos se bloquean por completo.
+
+33
+00:02:06.060 --> 00:02:10.550
+Y tras un tiempo límite de tres segundos,
+el sistema mata el programa, con estado
+
+34
+00:02:10.600 --> 00:02:12.180
+de salida 124.
+
+35
+00:02:13.040 --> 00:02:15.920
+Este fallo concreto se llama interbloqueo.
+
+36
+00:02:16.020 --> 00:02:19.240
+Es un estado en el que un conjunto de
+hilos se espera mutuamente para siempre.
+
+37
+00:02:19.880 --> 00:02:21.970
+Un interbloqueo no ocurre al azar.
+
+38
+00:02:22.020 --> 00:02:26.890
+Solo aparece si se cumplen a la vez cuatro
+reglas estrictas, las condiciones de Coffman.
+
+39
+00:02:26.940 --> 00:02:30.720
+La condición uno es la exclusión mutua.
+
+40
+00:02:30.980 --> 00:02:34.080
+Un palillo solo puede
+tenerlo un filósofo a la vez.
+
+41
+00:02:34.780 --> 00:02:36.460
+La condición dos es retener y esperar.
+
+42
+00:02:36.660 --> 00:02:40.660
+Un filósofo se queda con su primer
+palillo mientras espera el segundo.
+
+43
+00:02:41.200 --> 00:02:43.040
+La tres es la no expropiación.
+
+44
+00:02:43.220 --> 00:02:47.170
+El sistema operativo no puede obligar a
+un filósofo a soltar un palillo que ya
+
+45
+00:02:47.220 --> 00:02:50.900
+tiene. La condición cuatro
+es la espera circular.
+
+46
+00:02:51.040 --> 00:02:54.080
+Las dependencias forman un ciclo
+cerrado alrededor de la mesa.
+
+47
+00:02:54.440 --> 00:02:58.260
+Si se cumplen estas cuatro condiciones,
+tu sistema caerá en interbloqueo.
+
+48
+00:02:58.740 --> 00:03:02.790
+Como un interbloqueo necesita las cuatro
+condiciones, podemos arreglar el programa rompiendo
+
+49
+00:03:02.840 --> 00:03:07.230
+solo una. Eliminamos la espera
+circular dándole un número a cada
+
+50
+00:03:07.280 --> 00:03:10.220
+palillo. Introducimos un orden global.
+
+51
+00:03:10.480 --> 00:03:13.040
+Toma siempre primero el
+palillo de número más bajo.
+
+52
+00:03:13.360 --> 00:03:17.440
+El último filósofo, entre el cuatro
+y el cero, ahora busca el cero.
+
+53
+00:03:17.760 --> 00:03:20.380
+Como lo tiene el filósofo cero, se duerme.
+
+54
+00:03:20.880 --> 00:03:22.280
+El palillo cuatro queda libre.
+
+55
+00:03:22.360 --> 00:03:25.220
+El vecino lo toma, come y suelta los dos.
+
+56
+00:03:25.400 --> 00:03:29.760
+El ciclo se rompe. También puedes romper
+los interbloqueos con otros métodos.
+
+57
+00:03:29.880 --> 00:03:33.850
+Puedes limitar cuántos hilos compiten a la vez
+añadiendo un camarero, o puedes hacer que los
+
+58
+00:03:33.900 --> 00:03:37.620
+hilos suelten sus recursos y lo vuelvan
+a intentar con la función trylock.
+
+59
+00:03:38.180 --> 00:03:40.780
+Un mutex, por sí solo, no
+puede evitar un interbloqueo.
+
+60
+00:03:41.000 --> 00:03:45.610
+Para escribir código C concurrente y seguro,
+tienes que diseñar el orden exacto en que
+
+61
+00:03:45.660 --> 00:03:47.440
+tus hilos toman sus cerrojos.
+
+62
+00:03:48.100 --> 00:03:50.220
+Repasemos. Pregunta uno.
+
+63
+00:03:50.500 --> 00:03:53.500
+En un búfer acotado, ¿qué
+esperan los dos semáforos?
+
+64
+00:03:53.980 --> 00:03:56.540
+Esperan las posiciones vacías
+y las posiciones llenas.
+
+65
+00:03:57.220 --> 00:04:01.290
+Pregunta dos. ¿Qué condición de Coffman se
+rompe al tomar los cerrojos en un orden
+
+66
+00:04:01.340 --> 00:04:04.040
+numérico estricto? La espera circular.
+
+67
+00:04:04.280 --> 00:04:10.750
+Ahora abre las animaciones A7.2 y
+A7.3 en el aula y haz el laboratorio
+
+68
+00:04:10.800 --> 00:04:12.180
+TD6.

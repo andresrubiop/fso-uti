@@ -1,0 +1,319 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.510
+Imagina que escribes dos programas, los
+ejecutas a la vez y les pides que miren
+
+2
+00:00:07.560 --> 00:00:09.480
+exactamente la misma dirección de memoria.
+
+3
+00:00:09.680 --> 00:00:12.220
+Esperarías que encontraran
+exactamente los mismos datos.
+
+4
+00:00:12.380 --> 00:00:15.550
+Pero en un sistema
+operativo moderno no es así.
+
+5
+00:00:15.600 --> 00:00:17.600
+Encuentran valores
+completamente distintos.
+
+6
+00:00:18.140 --> 00:00:21.700
+Esto pasa por un engaño
+fundamental del sistema operativo.
+
+7
+00:00:22.240 --> 00:00:27.090
+En un equipo Linux x86-64, el
+sistema le miente a cada proceso.
+
+8
+00:00:27.140 --> 00:00:32.010
+Le da a cada programa la ilusión de
+que corre solo, dentro de un enorme
+
+9
+00:00:32.060 --> 00:00:35.480
+espacio de direcciones
+privado de 256 terabytes.
+
+10
+00:00:36.020 --> 00:00:40.390
+Esta salida de la terminal, del laboratorio
+del curso, muestra cómo divide un proceso ese
+
+11
+00:00:40.440 --> 00:00:45.570
+espacio privado. Se ven zonas distintas
+para el código, los datos inicializados, el
+
+12
+00:00:45.620 --> 00:00:50.390
+montículo para las peticiones pequeñas de memoria,
+las regiones mmap para las grandes y la pila para
+
+13
+00:00:50.440 --> 00:00:53.790
+las variables locales. Pero esas
+direcciones son estrictamente virtuales.
+
+14
+00:00:53.840 --> 00:00:57.680
+No apuntan directamente a los chips
+de RAM física de tu placa base.
+
+15
+00:00:58.680 --> 00:01:03.110
+Al darle a cada programa su propio sistema
+de coordenadas ficticio, el núcleo los aísla
+
+16
+00:01:03.160 --> 00:01:08.250
+por completo. Ningún programa puede pisar por
+accidente los datos de otro, porque ni siquiera
+
+17
+00:01:08.300 --> 00:01:10.280
+hablan el mismo idioma físico.
+
+18
+00:01:10.860 --> 00:01:15.610
+Para salvar esa distancia, la memoria virtual se
+divide en trozos llamados páginas, de exactamente
+
+19
+00:01:15.660 --> 00:01:21.980
+4096 bytes cada una. La RAM física se divide
+en marcos equivalentes de 4096 bytes.
+
+20
+00:01:22.160 --> 00:01:26.210
+Una tabla de páginas del núcleo, con ayuda de
+la unidad de gestión de memoria del hardware y
+
+21
+00:01:26.260 --> 00:01:31.280
+de la caché TLB, dirige cada página
+virtual a un marco físico concreto.
+
+22
+00:01:31.700 --> 00:01:35.070
+Cuando un programa usa una página
+virtual que aún no tiene un marco físico
+
+23
+00:01:35.120 --> 00:01:37.700
+asignado, el hardware detiene el proceso.
+
+24
+00:01:37.860 --> 00:01:41.580
+Provoca lo que se llama un fallo
+de página y salta al núcleo.
+
+25
+00:01:42.000 --> 00:01:46.570
+El núcleo toma entonces un marco físico libre,
+lo pone a cero, actualiza la tabla de páginas
+
+26
+00:01:46.620 --> 00:01:48.040
+y repite la instrucción.
+
+27
+00:01:48.340 --> 00:01:50.270
+Esto se llama asignación perezosa.
+
+28
+00:01:50.320 --> 00:01:54.390
+El sistema solo gasta memoria física en
+el momento exacto en que el programa
+
+29
+00:01:54.440 --> 00:01:59.210
+la toca. Esta capa estricta de traducción, asistida
+por el hardware, es lo que hace funcionar toda la
+
+30
+00:01:59.260 --> 00:02:04.170
+ilusión. Como el núcleo controla las
+traducciones, un proceso queda físicamente
+
+31
+00:02:04.220 --> 00:02:06.180
+atrapado dentro de sus propias páginas.
+
+32
+00:02:06.760 --> 00:02:11.690
+Entonces, ¿qué pasa con este enorme espacio
+de direcciones cuando un proceso necesita
+
+33
+00:02:11.740 --> 00:02:14.460
+clonarse con la llamada al sistema fork?
+
+34
+00:02:15.040 --> 00:02:18.100
+Copiar físicamente todos
+esos datos sería lentísimo.
+
+35
+00:02:18.570 --> 00:02:20.380
+Pero mira esta salida del laboratorio.
+
+36
+00:02:20.920 --> 00:02:27.060
+Clonar un proceso de 256 megabytes en el
+equipo del curso tomó solo 6,70 milisegundos.
+
+37
+00:02:27.340 --> 00:02:31.400
+Esa velocidad sería físicamente imposible
+si de verdad se duplicara la RAM.
+
+38
+00:02:31.600 --> 00:02:35.020
+El sistema lo logra con un truco
+llamado copia en escritura.
+
+39
+00:02:35.380 --> 00:02:39.780
+En vez de copiar la memoria real, el
+núcleo solo copia las tablas de páginas.
+
+40
+00:02:39.900 --> 00:02:45.060
+Hace que los dos procesos apunten a los mismos
+marcos físicos y los marca como de solo lectura.
+
+41
+00:02:45.200 --> 00:02:49.930
+Si uno modifica los datos, el núcleo intercepta
+la escritura, duplica esa página concreta
+
+42
+00:02:49.980 --> 00:02:53.860
+de 4096 bytes y deja que el programa siga.
+
+43
+00:02:54.060 --> 00:02:58.160
+Esto cuesta solo 2753
+nanosegundos por fallo.
+
+44
+00:02:58.540 --> 00:03:02.850
+La copia en escritura convierte una duplicación
+masiva de memoria en una operación perezosa,
+
+45
+00:03:02.900 --> 00:03:07.510
+bajo demanda. Ahorra tiempo y RAM, y
+mantiene intacta la ilusión de memoria
+
+46
+00:03:07.560 --> 00:03:11.790
+aislada. Pero una clonación tan absoluta
+tiene un efecto secundario curioso.
+
+47
+00:03:11.840 --> 00:03:16.650
+Si usas una función como printf justo
+antes de llamar a fork, puedes ver tu texto
+
+48
+00:03:16.700 --> 00:03:19.760
+impreso dos veces en la pantalla,
+como en esta salida del laboratorio.
+
+49
+00:03:20.020 --> 00:03:22.740
+La biblioteca de C no escribe
+el texto de inmediato.
+
+50
+00:03:22.860 --> 00:03:27.220
+Lo acumula en un búfer interno, dentro de
+la memoria del proceso en modo usuario.
+
+51
+00:03:27.400 --> 00:03:32.050
+Cuando se ejecuta fork, copia perfectamente
+todo el espacio de memoria, incluido ese
+
+52
+00:03:32.100 --> 00:03:37.270
+búfer sin vaciar. Ahora el padre y el
+hijo tienen el mismo texto pendiente en
+
+53
+00:03:37.320 --> 00:03:41.850
+memoria. Cuando los dos procesos terminan y
+llaman a la función exit de la biblioteca, ambos
+
+54
+00:03:41.900 --> 00:03:44.880
+vacían sus búferes en la pantalla
+y la línea sale dos veces.
+
+55
+00:03:45.180 --> 00:03:48.910
+Si el padre hubiera llamado en su lugar
+a la llamada al sistema _exit, se habría
+
+56
+00:03:48.960 --> 00:03:51.240
+saltado el vaciado y habría
+evitado el duplicado.
+
+57
+00:03:51.520 --> 00:03:54.600
+La dedicación del sistema
+a la ilusión es absoluta.
+
+58
+00:03:54.780 --> 00:03:59.350
+El núcleo se asegura de clonar sin
+fallos cada byte del proceso, incluso
+
+59
+00:03:59.400 --> 00:04:02.120
+sus errores en el búfer. Repasemos.
+
+60
+00:04:02.240 --> 00:04:07.380
+Pregunta uno: ¿por qué fork es tan
+rápido, incluso con un proceso grande?
+
+61
+00:04:07.800 --> 00:04:13.420
+Por la copia en escritura. Solo copia las
+tablas de páginas, no la memoria física.
+
+62
+00:04:14.140 --> 00:04:19.360
+Pregunta dos: ¿por qué el texto impreso puede
+aparecer dos veces después de llamar a fork?
+
+63
+00:04:19.820 --> 00:04:25.030
+Porque el búfer de la biblioteca de C está
+dentro de la memoria del proceso, y fork copia
+
+64
+00:04:25.080 --> 00:04:27.020
+al hijo el búfer sin vaciar.
+
+65
+00:04:27.380 --> 00:04:34.250
+Ahora abre las animaciones A4.1,
+A4.2 y A4.6 en el aula y haz
+
+66
+00:04:34.300 --> 00:04:36.020
+el laboratorio TD3.

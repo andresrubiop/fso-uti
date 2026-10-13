@@ -1,0 +1,301 @@
+WEBVTT
+
+1
+00:00:03.020 --> 00:00:08.250
+In a typical C program, a parent process
+might need to send a continuous stream of
+
+2
+00:00:08.300 --> 00:00:13.950
+data to a child process. But sometimes,
+instead of finishing the task, the data flow
+
+3
+00:00:14.000 --> 00:00:18.830
+suddenly halts. The program completely
+freezes in place and the terminal stops
+
+4
+00:00:18.880 --> 00:00:21.560
+responding. This is a deadlock.
+
+5
+00:00:21.760 --> 00:00:26.310
+It happens when a program that should complete
+its execution ends up waiting forever
+
+6
+00:00:26.360 --> 00:00:28.030
+for an event that will never occur.
+
+7
+00:00:28.080 --> 00:00:32.820
+If we check the terminal output, we can
+see the system eventually had to intervene,
+
+8
+00:00:32.960 --> 00:00:36.860
+killing the blocked program after
+a timeout with exit status 124.
+
+9
+00:00:37.480 --> 00:00:42.490
+So why does a perfectly valid stream of
+bytes between two related processes result
+
+10
+00:00:42.540 --> 00:00:44.380
+in a permanent system freeze?
+
+11
+00:00:44.620 --> 00:00:48.400
+To diagnose this freeze, we have to
+look below the privilege boundary.
+
+12
+00:00:48.480 --> 00:00:52.250
+This boundary separates our programs,
+running in user mode, from the operating
+
+13
+00:00:52.300 --> 00:00:57.550
+system's kernel. When a program uses the
+pipe system call, it creates a circular
+
+14
+00:00:57.600 --> 00:01:02.530
+buffer inside the kernel. This buffer acts
+as a continuous byte stream, moving data
+
+15
+00:01:02.580 --> 00:01:05.240
+strictly in order without
+any message boundaries.
+
+16
+00:01:05.380 --> 00:01:10.240
+The kernel then hands exactly two file
+descriptors back to the process in user mode.
+
+17
+00:01:10.300 --> 00:01:14.460
+One descriptor is exclusively for reading,
+and the other is strictly for writing.
+
+18
+00:01:14.660 --> 00:01:17.410
+The pipe provides a direct,
+physical bridge for the data.
+
+19
+00:01:17.460 --> 00:01:22.230
+However, the operating system requires
+you to manually and strictly manage these
+
+20
+00:01:22.280 --> 00:01:25.080
+file descriptors for the
+bridge to function safely.
+
+21
+00:01:25.360 --> 00:01:29.610
+When the parent process calls fork, it
+duplicates itself, creating an identical
+
+22
+00:01:29.660 --> 00:01:32.290
+child process alongside it in user mode.
+
+23
+00:01:32.340 --> 00:01:34.860
+The child inherits
+everything from the parent.
+
+24
+00:01:35.000 --> 00:01:39.330
+That means both processes now hold their
+own independent pairs of read and write
+
+25
+00:01:39.380 --> 00:01:42.090
+descriptors, pointing to the
+exact same kernel buffer.
+
+26
+00:01:42.140 --> 00:01:45.220
+This introduces the golden rule of pipes.
+
+27
+00:01:45.440 --> 00:01:47.840
+Data must flow in only one direction.
+
+28
+00:01:48.080 --> 00:01:52.330
+To enforce this, each process must actively
+sever the connections it does not intend
+
+29
+00:01:52.380 --> 00:01:57.170
+to use. In a standard setup, the parent uses
+the close function on its read end, and
+
+30
+00:01:57.220 --> 00:01:59.500
+the child uses close on its write end.
+
+31
+00:01:59.700 --> 00:02:04.190
+Closing these unused descriptors is the
+only way the kernel knows the true, one-way
+
+32
+00:02:04.240 --> 00:02:05.390
+direction of the data stream.
+
+33
+00:02:05.440 --> 00:02:10.530
+With the pipe set up properly, the parent
+process begins using the write system call
+
+34
+00:02:10.580 --> 00:02:12.980
+to rapidly pump bytes into the channel.
+
+35
+00:02:13.120 --> 00:02:16.120
+But this kernel buffer has
+a strict physical limit.
+
+36
+00:02:16.380 --> 00:02:21.520
+On Linux, the default capacity
+is exactly 65,536 bytes.
+
+37
+00:02:21.880 --> 00:02:25.910
+Once that 64-kilobyte capacity
+is full, the kernel steps in.
+
+38
+00:02:25.960 --> 00:02:30.490
+It physically blocks the parent process
+from writing any more data until the child
+
+39
+00:02:30.540 --> 00:02:32.390
+performs a read to free up space.
+
+40
+00:02:32.440 --> 00:02:36.480
+Eventually, the child process
+finishes its task and exits.
+
+41
+00:02:36.860 --> 00:02:41.250
+When that happens, there are exactly zero
+read descriptors left open anywhere in the
+
+42
+00:02:41.300 --> 00:02:43.800
+system. The kernel detects this absence.
+
+43
+00:02:44.000 --> 00:02:48.540
+If the parent tries to write again, the
+kernel immediately raises a SIGPIPE signal,
+
+44
+00:02:48.600 --> 00:02:51.940
+safely terminating the parent
+process with exit status 141.
+
+45
+00:02:52.460 --> 00:02:55.830
+These capacity limits and fatal
+signals are not random errors.
+
+46
+00:02:55.880 --> 00:02:59.350
+They are the strict rules the kernel
+enforces to gracefully tear down the
+
+47
+00:02:59.400 --> 00:03:03.060
+communication channel. So let's
+go back to our initial problem.
+
+48
+00:03:03.460 --> 00:03:07.010
+Why did our first program freeze indefinitely
+instead of safely receiving that
+
+49
+00:03:07.060 --> 00:03:10.960
+SIGPIPE signal? The culprit is
+a single missing line of code.
+
+50
+00:03:11.080 --> 00:03:14.640
+The parent process forgot to call
+close on its own read descriptor.
+
+51
+00:03:15.040 --> 00:03:18.330
+Because this specific descriptor remains
+open, the kernel follows its rules
+
+52
+00:03:18.380 --> 00:03:22.880
+literally. It believes a valid reader
+still exists, the parent itself.
+
+53
+00:03:23.040 --> 00:03:26.830
+The parent rapidly fills
+the 65,536-byte buffer.
+
+54
+00:03:26.880 --> 00:03:31.010
+Once full, the kernel blocks the parent
+forever, waiting for a reader that will
+
+55
+00:03:31.060 --> 00:03:32.840
+never arrive to clear the space.
+
+56
+00:03:33.180 --> 00:03:36.460
+A single, unclosed file descriptor
+creates a phantom reader.
+
+57
+00:03:36.580 --> 00:03:40.390
+This small oversight turns a built-in
+safety mechanism into a permanent system
+
+58
+00:03:40.440 --> 00:03:42.720
+deadlock. Let's do a quick review.
+
+59
+00:03:43.220 --> 00:03:45.840
+What is the exact capacity
+of a pipe on Linux?
+
+60
+00:03:46.960 --> 00:03:50.220
+65,536 bytes. Second question.
+
+61
+00:03:50.580 --> 00:03:54.000
+What signal is raised if a process
+writes to a pipe that has no readers?
+
+62
+00:03:54.580 --> 00:03:57.040
+SIGPIPE, causing exit status 141.
+
+63
+00:03:57.820 --> 00:04:02.240
+Now open animation A5.2 in the
+course hub and run lab TD4.

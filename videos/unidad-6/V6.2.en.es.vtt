@@ -1,0 +1,277 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.400
+Tenemos 32 procesos corriendo
+a la vez en modo usuario.
+
+2
+00:00:07.580 --> 00:00:12.480
+Tienen una tarea sencilla: registrar su identificador
+de proceso en un único contador compartido.
+
+3
+00:00:12.920 --> 00:00:16.360
+Si todo se ejecuta como se
+espera, la cuenta es sencilla.
+
+4
+00:00:16.680 --> 00:00:20.380
+El contador debería subir sin problemas
+y detenerse exactamente en 32.
+
+5
+00:00:20.860 --> 00:00:25.390
+Pero en esta salida de la terminal
+del programa shm_race vemos otra
+
+6
+00:00:25.440 --> 00:00:31.470
+realidad. Los resultados son totalmente
+impredecibles: dan totales como 19, 28 o
+
+7
+00:00:31.520 --> 00:00:34.560
+25. Los programas no se caen.
+
+8
+00:00:34.800 --> 00:00:38.960
+Lo que pasa es que los registros desaparecen
+en silencio durante la ejecución.
+
+9
+00:00:39.600 --> 00:00:42.420
+Estos procesos se comunican
+mediante memoria compartida.
+
+10
+00:00:42.540 --> 00:00:46.190
+Escriben directamente en el mismo espacio,
+algo que, como demuestran los registros
+
+11
+00:00:46.240 --> 00:00:48.760
+perdidos, es muy peligroso.
+
+12
+00:00:49.200 --> 00:00:53.310
+Para resolver el misterio, hay que ver
+primero cómo los procesos se saltan
+
+13
+00:00:53.360 --> 00:00:56.680
+su propio aislamiento
+para compartir memoria.
+
+14
+00:00:56.980 --> 00:01:01.650
+Normalmente, el sistema operativo mantiene los
+procesos totalmente aislados, separados del
+
+15
+00:01:01.700 --> 00:01:03.540
+núcleo por la frontera de privilegios.
+
+16
+00:01:03.780 --> 00:01:08.130
+Podemos perforar ese aislamiento con una
+llamada al sistema llamada mmap y la opción
+
+17
+00:01:08.180 --> 00:01:13.190
+MAP_SHARED. Así dos procesos pueden mapear un
+archivo común, con sus páginas virtuales apuntando
+
+18
+00:01:13.240 --> 00:01:15.500
+al mismo marco físico.
+
+19
+00:01:15.720 --> 00:01:20.310
+El núcleo gestiona esta memoria física con
+reglas geográficas estrictas: la reparte
+
+20
+00:01:20.360 --> 00:01:23.500
+en páginas enteras de
+exactamente 4096 bytes.
+
+21
+00:01:23.740 --> 00:01:27.290
+Esta salida del programa mmap_limits
+muestra la primera regla.
+
+22
+00:01:27.340 --> 00:01:31.570
+Si un proceso intenta tocar una página que
+está entera más allá del final del archivo,
+
+23
+00:01:31.620 --> 00:01:33.180
+no hay datos que traer.
+
+24
+00:01:33.240 --> 00:01:35.980
+El núcleo interviene y
+envía la señal SIGBUS.
+
+25
+00:01:36.240 --> 00:01:38.020
+Hay un segundo límite.
+
+26
+00:01:38.260 --> 00:01:42.370
+Si un proceso intenta escribir en una zona
+mapeada con permisos de solo lectura,
+
+27
+00:01:42.420 --> 00:01:45.480
+el núcleo vuelve a intervenir
+y envía la señal SIGSEGV.
+
+28
+00:01:45.900 --> 00:01:50.470
+Así que, aunque mmap crea con éxito un espacio
+abierto para los datos, el núcleo sigue actuando como
+
+29
+00:01:50.520 --> 00:01:53.400
+un estricto guardia de frontera que
+hace cumplir límites y permisos.
+
+30
+00:01:53.560 --> 00:01:56.670
+Hay otra forma de compartir datos
+que no necesita un archivo detrás.
+
+31
+00:01:56.720 --> 00:02:02.290
+Podemos usar la memoria compartida de
+System V, con shmget y shmat, para crear un
+
+32
+00:02:02.340 --> 00:02:06.990
+bloque de memoria independiente. El rasgo
+que define a esta memoria de System V es su
+
+33
+00:02:07.040 --> 00:02:11.570
+persistencia. El segmento sobrevive
+a los procesos que lo crearon.
+
+34
+00:02:11.620 --> 00:02:16.860
+Se queda en el sistema con sus datos hasta
+que un proceso lo destruye explícitamente.
+
+35
+00:02:16.920 --> 00:02:22.180
+Tanto si mapeamos un archivo como si usamos System
+V, obtenemos un espacio de memoria rapidísimo.
+
+36
+00:02:22.360 --> 00:02:27.840
+Pero este acceso directo y sin protección es
+justo lo que hizo fallar a nuestros 32 procesos.
+
+37
+00:02:28.180 --> 00:02:32.880
+Volvamos a nuestros 32 procesos y pongámoslos
+alrededor del nuevo bloque de memoria compartida.
+
+38
+00:02:33.240 --> 00:02:37.370
+Como la memoria compartida funciona por completo
+en modo usuario, la comunicación nunca pasa
+
+39
+00:02:37.420 --> 00:02:41.120
+por el núcleo. No hay árbitro
+que sincronice sus acciones.
+
+40
+00:02:41.420 --> 00:02:45.460
+El fallo ocurre en una operación
+muy simple: incrementar el contador.
+
+41
+00:02:45.660 --> 00:02:48.540
+A la velocidad del procesador,
+parece una sola acción.
+
+42
+00:02:48.640 --> 00:02:52.210
+Pero si ralentizamos el tiempo, vemos
+que en realidad son tres pasos distintos.
+
+43
+00:02:52.260 --> 00:02:55.620
+Leer el valor, sumarle
+uno y volver a escribirlo.
+
+44
+00:02:55.940 --> 00:03:00.210
+Sin un árbitro en el núcleo, dos procesos
+distintos pueden hacer la lectura en
+
+45
+00:03:00.260 --> 00:03:01.940
+exactamente la misma fracción de segundo.
+
+46
+00:03:02.020 --> 00:03:06.960
+Los dos leen un uno, los dos le suman uno y los
+dos escriben un dos en la memoria compartida.
+
+47
+00:03:07.100 --> 00:03:10.400
+Trabajaron dos procesos, pero
+el contador solo subió en uno.
+
+48
+00:03:10.720 --> 00:03:13.340
+Este choque mecánico es
+una condición de carrera.
+
+49
+00:03:13.560 --> 00:03:17.410
+Por eso los registros de nuestros procesos
+se pisaron entre sí en silencio y
+
+50
+00:03:17.460 --> 00:03:21.210
+desaparecieron. La memoria compartida
+nos da una velocidad bruta sin igual.
+
+51
+00:03:21.260 --> 00:03:25.490
+Pero para usarla con seguridad, tenemos que
+construir nuestra propia sincronización: ese es el
+
+52
+00:03:25.540 --> 00:03:28.060
+reto de la unidad 7. Repasemos.
+
+53
+00:03:28.380 --> 00:03:32.870
+Si un proceso escribe en una página que está entera
+más allá del final de un archivo mapeado, ¿qué
+
+54
+00:03:32.920 --> 00:03:34.420
+señal envía el núcleo?
+
+55
+00:03:34.820 --> 00:03:39.930
+SIGBUS. Siguiente. ¿Por qué la memoria compartida
+de System V sigue en el sistema cuando el programa
+
+56
+00:03:39.980 --> 00:03:44.670
+termina? Porque el segmento sobrevive a
+los procesos hasta que alguien lo destruye
+
+57
+00:03:44.720 --> 00:03:51.920
+explícitamente. Ahora abre las animaciones A6.2
+y A6.3 en el aula y haz el laboratorio TD5.

@@ -1,0 +1,276 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.400
+We have 32 processes running
+simultaneously in user mode.
+
+2
+00:00:07.580 --> 00:00:12.480
+They have one simple job, register their
+process ID in a single shared counter.
+
+3
+00:00:12.920 --> 00:00:16.360
+If everything executes as intended,
+the math is straightforward.
+
+4
+00:00:16.680 --> 00:00:20.380
+The counter should neatly tick
+up and stop at exactly 32.
+
+5
+00:00:20.860 --> 00:00:25.390
+But looking at this terminal output from
+the shm_race program, we see a different
+
+6
+00:00:25.440 --> 00:00:31.470
+reality. The results are entirely
+unpredictable, returning totals like 19, 28, or
+
+7
+00:00:31.520 --> 00:00:34.560
+25. The programs are not crashing.
+
+8
+00:00:34.800 --> 00:00:38.960
+Instead, the registration data is
+silently disappearing during execution.
+
+9
+00:00:39.600 --> 00:00:42.420
+These processes are communicating
+using shared memory.
+
+10
+00:00:42.540 --> 00:00:46.190
+They're writing directly to the exact
+same space, which, as these missing
+
+11
+00:00:46.240 --> 00:00:48.760
+registrations prove, is highly dangerous.
+
+12
+00:00:49.200 --> 00:00:53.310
+To solve the mystery of the vanishing data,
+we have to look at how processes bypass
+
+13
+00:00:53.360 --> 00:00:56.680
+their own isolation to share
+memory in the first place.
+
+14
+00:00:56.980 --> 00:01:01.650
+Normally, the operating system keeps
+processes completely isolated, separated from
+
+15
+00:01:01.700 --> 00:01:03.540
+the kernel by the privilege boundary.
+
+16
+00:01:03.780 --> 00:01:08.130
+We can pierce that isolation using a
+system call named mmap with the MAP_SHARED
+
+17
+00:01:08.180 --> 00:01:13.190
+flag. This allows two processes to map a
+common file, pointing their virtual pages
+
+18
+00:01:13.240 --> 00:01:15.500
+to the exact same physical frame.
+
+19
+00:01:15.720 --> 00:01:20.310
+The kernel manages this physical memory
+using strict geographic rules, allocating it
+
+20
+00:01:20.360 --> 00:01:23.500
+in whole pages of exactly 4,096 bytes.
+
+21
+00:01:23.740 --> 00:01:27.290
+This output from the mmap_limits
+program reveals the first rule.
+
+22
+00:01:27.340 --> 00:01:31.570
+If a process attempts to touch a page that
+lies entirely past the end of the file,
+
+23
+00:01:31.620 --> 00:01:33.180
+there is no data to bring in.
+
+24
+00:01:33.240 --> 00:01:35.980
+The kernel intervenes and
+sends a SIGBUS signal.
+
+25
+00:01:36.240 --> 00:01:38.020
+There is a second boundary limit.
+
+26
+00:01:38.260 --> 00:01:42.370
+If a process tries to write to a mapped
+area protected with read-only permissions,
+
+27
+00:01:42.420 --> 00:01:45.480
+the kernel intervenes again
+by sending a SIGSEGV signal.
+
+28
+00:01:45.900 --> 00:01:50.470
+So while mmap successfully creates an open
+arena for data, the kernel still acts as
+
+29
+00:01:50.520 --> 00:01:53.400
+a strict border guard enforcing
+boundaries and permissions.
+
+30
+00:01:53.560 --> 00:01:56.670
+There is another way to share data
+that does not require a backing file.
+
+31
+00:01:56.720 --> 00:02:02.290
+We can use System V shared memory,
+calling shmget and shmat to create a
+
+32
+00:02:02.340 --> 00:02:06.990
+standalone memory block. The defining
+characteristic of this System V memory is its
+
+33
+00:02:07.040 --> 00:02:11.570
+persistence. The segment actually
+outlives the processes that created it.
+
+34
+00:02:11.620 --> 00:02:16.860
+It will sit in the system holding its data
+until a process explicitly destroys it.
+
+35
+00:02:16.920 --> 00:02:22.180
+Whether we map a file or use System V,
+we get an incredibly fast memory space.
+
+36
+00:02:22.360 --> 00:02:27.840
+But this raw unprotected access is exactly
+what caused our 32 processes to fail.
+
+37
+00:02:28.180 --> 00:02:32.880
+Let's bring back our 32 processes and place
+them around our new shared memory block.
+
+38
+00:02:33.240 --> 00:02:37.370
+Because shared memory operates entirely
+in user mode, communication never passes
+
+39
+00:02:37.420 --> 00:02:41.120
+through the kernel. There is no
+referee to synchronize their actions.
+
+40
+00:02:41.420 --> 00:02:45.460
+The failure happens during a very simple
+operation, incrementing the counter.
+
+41
+00:02:45.660 --> 00:02:48.540
+At processor speeds, this
+looks like one action.
+
+42
+00:02:48.640 --> 00:02:52.210
+But if we slow down time, we see it
+is actually three distinct steps.
+
+43
+00:02:52.260 --> 00:02:55.620
+Read the value, add
+one, and write it back.
+
+44
+00:02:55.940 --> 00:03:00.210
+Without a kernel referee, two separate
+processes can execute the read step at the
+
+45
+00:03:00.260 --> 00:03:01.940
+exact same fraction of a second.
+
+46
+00:03:02.020 --> 00:03:06.960
+They both pull a one, both locally add one,
+and write a two back to shared memory.
+
+47
+00:03:07.100 --> 00:03:10.400
+Two processes worked, but the
+counter only went up by one.
+
+48
+00:03:10.720 --> 00:03:13.340
+This mechanical collision
+is a race condition.
+
+49
+00:03:13.560 --> 00:03:17.410
+It is the exact reason our process
+registrations silently overrode each other and
+
+50
+00:03:17.460 --> 00:03:21.210
+vanished. Shared memory gives
+us unparalleled raw speed.
+
+51
+00:03:21.260 --> 00:03:25.490
+But to use it safely, we are forced to
+build our own synchronization, which is the
+
+52
+00:03:25.540 --> 00:03:28.060
+challenge of Unit 7. Let's review.
+
+53
+00:03:28.380 --> 00:03:32.870
+If a process writes to a page that lies
+entirely past the end of a mapped file, what
+
+54
+00:03:32.920 --> 00:03:34.420
+signal does the kernel send?
+
+55
+00:03:34.820 --> 00:03:39.930
+SIGBUS. Next. Why does System V shared
+memory remain in the system after a program
+
+56
+00:03:39.980 --> 00:03:44.670
+ends? Because the segment outlives the
+processes until someone explicitly destroys
+
+57
+00:03:44.720 --> 00:03:51.920
+it. Now open animations A6.2 and A6.3
+in the course hub, and run lab TD5.

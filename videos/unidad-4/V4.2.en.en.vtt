@@ -1,0 +1,320 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.510
+Imagine writing two programs, running them
+side by side, and asking them to look at
+
+2
+00:00:07.560 --> 00:00:09.480
+the exact same memory address.
+
+3
+00:00:09.680 --> 00:00:12.220
+You would expect them to
+find the exact same data.
+
+4
+00:00:12.380 --> 00:00:15.550
+But on a modern operating
+system, they don't.
+
+5
+00:00:15.600 --> 00:00:17.600
+They find completely different values.
+
+6
+00:00:18.140 --> 00:00:21.700
+This happens because of a core
+deception in the operating system.
+
+7
+00:00:22.240 --> 00:00:27.090
+On an x86-64 Linux machine, the
+system lies to every single process.
+
+8
+00:00:27.140 --> 00:00:32.010
+It gives each program the illusion that
+it is running alone, inside a massive
+
+9
+00:00:32.060 --> 00:00:35.480
+private address space of 256 terabytes.
+
+10
+00:00:36.020 --> 00:00:40.390
+This terminal output from our course lab
+shows exactly how a process divides that
+
+11
+00:00:40.440 --> 00:00:45.570
+private space. We can see distinct zones
+for the code, the initialized data, the
+
+12
+00:00:45.620 --> 00:00:50.390
+heap for small memory requests, the mmap
+regions for large ones, and the stack for
+
+13
+00:00:50.440 --> 00:00:53.790
+local variables. But those
+addresses are strictly virtual.
+
+14
+00:00:53.840 --> 00:00:57.680
+They do not point directly to the
+physical RAM chips on your motherboard.
+
+15
+00:00:58.680 --> 00:01:03.110
+By giving each program its own fake coordinate
+system, the kernel perfectly isolates
+
+16
+00:01:03.160 --> 00:01:08.250
+them. No program can accidentally overwrite
+another's data, because they aren't even
+
+17
+00:01:08.300 --> 00:01:10.280
+speaking the same physical language.
+
+18
+00:01:10.860 --> 00:01:15.610
+To bridge this gap, virtual memory is broken
+into chunks called pages, each exactly
+
+19
+00:01:15.660 --> 00:01:21.980
+4,096 bytes long. Physical RAM is
+divided into matching 4,096-byte frames.
+
+20
+00:01:22.160 --> 00:01:26.210
+A kernel-maintained page table, helped by
+the hardware memory management unit and
+
+21
+00:01:26.260 --> 00:01:31.280
+TLB cache, actively routes every virtual
+page to a specific physical frame.
+
+22
+00:01:31.700 --> 00:01:35.070
+When a program tries to use a virtual
+page that doesn't have a physical frame
+
+23
+00:01:35.120 --> 00:01:37.700
+assigned yet, the hardware
+pauses the process.
+
+24
+00:01:37.860 --> 00:01:41.580
+It raises what is called a page fault,
+and jumps down into the kernel.
+
+25
+00:01:42.000 --> 00:01:46.570
+The kernel then grabs a free physical frame,
+clears it out, updates the page table,
+
+26
+00:01:46.620 --> 00:01:48.040
+and retries the instruction.
+
+27
+00:01:48.340 --> 00:01:50.270
+This is called lazy allocation.
+
+28
+00:01:50.320 --> 00:01:54.390
+The system only spends physical memory
+at the exact moment the program actually
+
+29
+00:01:54.440 --> 00:01:59.210
+touches it. This strict, hardware-assisted
+mapping layer is what makes the whole
+
+30
+00:01:59.260 --> 00:02:04.170
+illusion work. Because the kernel controls
+the translations, a process is physically
+
+31
+00:02:04.220 --> 00:02:06.180
+trapped inside its own pages.
+
+32
+00:02:06.760 --> 00:02:11.690
+So what happens to this massive, carefully
+mapped address space when a process needs
+
+33
+00:02:11.740 --> 00:02:14.460
+to clone itself using
+the fork system call?
+
+34
+00:02:15.040 --> 00:02:18.100
+Copying all that data physically
+would be incredibly slow.
+
+35
+00:02:18.570 --> 00:02:20.380
+But look at this lab output.
+
+36
+00:02:20.920 --> 00:02:27.060
+Cloning a 256-megabyte process on the
+course machine took just 6.70 milliseconds.
+
+37
+00:02:27.340 --> 00:02:31.400
+That speed is physically impossible if
+the RAM was actually being duplicated.
+
+38
+00:02:31.600 --> 00:02:35.020
+The system achieves this through
+a trick called copy-on-write.
+
+39
+00:02:35.380 --> 00:02:39.780
+Instead of copying the actual memory,
+the kernel only copies the page tables.
+
+40
+00:02:39.900 --> 00:02:45.060
+It points both processes to the exact same
+physical frames, marking them read-only.
+
+41
+00:02:45.200 --> 00:02:49.930
+If one modifies the data, the kernel
+intercepts the write, duplicates that specific
+
+42
+00:02:49.980 --> 00:02:53.860
+4096-byte page, and lets
+the program continue.
+
+43
+00:02:54.060 --> 00:02:58.160
+This takes only 2,753
+nanoseconds per fault.
+
+44
+00:02:58.540 --> 00:03:02.850
+Copy-on-write turns a massive memory
+duplication job into a lazy, on-demand
+
+45
+00:03:02.900 --> 00:03:07.510
+operation. It saves time and RAM, while
+keeping the illusion of isolated memory
+
+46
+00:03:07.560 --> 00:03:11.790
+completely intact. But absolute
+cloning has a strange side effect.
+
+47
+00:03:11.840 --> 00:03:16.650
+If you use a function like printf right
+before calling fork, you might see your text
+
+48
+00:03:16.700 --> 00:03:19.760
+print twice on the screen,
+like in this lab output.
+
+49
+00:03:20.020 --> 00:03:22.740
+The C library doesn't
+output text immediately.
+
+50
+00:03:22.860 --> 00:03:27.220
+It accumulates it in an internal buffer
+inside the process's user-mode memory.
+
+51
+00:03:27.400 --> 00:03:32.050
+When fork executes, it copies the entire
+memory space perfectly, including that
+
+52
+00:03:32.100 --> 00:03:37.270
+unflushed buffer. Now, both parent and
+child hold the exact same pending text in
+
+53
+00:03:37.320 --> 00:03:41.850
+memory. When both processes finish and
+call the library exit function, they both
+
+54
+00:03:41.900 --> 00:03:44.880
+flush their buffers to the
+screen, printing the line twice.
+
+55
+00:03:45.180 --> 00:03:48.910
+If the parent had called the underscore
+exit system call instead, it would have
+
+56
+00:03:48.960 --> 00:03:51.240
+skipped the flush and
+avoided the duplicate.
+
+57
+00:03:51.520 --> 00:03:54.600
+The system's dedication to
+the illusion is absolute.
+
+58
+00:03:54.780 --> 00:03:59.350
+The kernel ensures that every single byte
+of the process is flawlessly cloned, even
+
+59
+00:03:59.400 --> 00:04:02.120
+its buffered mistakes. Let's review.
+
+60
+00:04:02.240 --> 00:04:07.380
+Question one, why is fork so
+fast, even for a large process?
+
+61
+00:04:07.800 --> 00:04:13.420
+Because of copy-on-write. It only copies
+the page tables, not the physical memory.
+
+62
+00:04:14.140 --> 00:04:19.360
+Question two, why might printed text
+appear twice after calling fork?
+
+63
+00:04:19.820 --> 00:04:25.030
+Because the C library buffer is inside
+the process memory, and fork copies the
+
+64
+00:04:25.080 --> 00:04:27.020
+unflushed buffer to the child.
+
+65
+00:04:27.380 --> 00:04:34.250
+Now open animations A4.1, A4.2,
+and A4.6 in the course hub, and run
+
+66
+00:04:34.300 --> 00:04:36.020
+lab TD3.

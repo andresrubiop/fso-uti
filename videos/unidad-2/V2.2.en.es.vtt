@@ -1,0 +1,347 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.320
+Imagina dos computadores idénticos
+copiando el mismo archivo de 8 megabytes.
+
+2
+00:00:08.600 --> 00:00:14.000
+Uno termina al instante. El otro se
+arrastra y tarda varios segundos.
+
+3
+00:00:14.460 --> 00:00:19.310
+Hablamos de menos de un milisegundo
+frente a segundos de espera
+
+4
+00:00:19.360 --> 00:00:23.660
+desesperante. Los dos programas
+usan exactamente la misma lógica.
+
+5
+00:00:23.780 --> 00:00:28.010
+Lo único que cambia es el tamaño del
+búfer de memoria donde guardan los
+
+6
+00:00:28.060 --> 00:00:33.410
+datos. ¿Cómo puede el tamaño de un
+búfer decidir la velocidad de una simple
+
+7
+00:00:33.460 --> 00:00:38.590
+tarea de entrada y salida? Para saberlo,
+hay que mirar de cerca cómo se comunica
+
+8
+00:00:38.640 --> 00:00:41.240
+un proceso con el sistema operativo.
+
+9
+00:00:41.700 --> 00:00:46.670
+Todo proceso nace con tres descriptores de archivo
+abiertos: el cero para la entrada estándar, el uno
+
+10
+00:00:46.720 --> 00:00:49.740
+para la salida estándar y el
+dos para el error estándar.
+
+11
+00:00:50.180 --> 00:00:53.830
+El programa no sabe qué
+representan esos números.
+
+12
+00:00:53.880 --> 00:00:57.160
+Solo los usa para pedir o enviar datos.
+
+13
+00:00:57.400 --> 00:01:01.790
+Es la shell la que les da sentido,
+con operadores como menor
+
+14
+00:01:01.840 --> 00:01:06.260
+que o mayor que. La shell los asocia a
+un archivo, una terminal o una tubería.
+
+15
+00:01:06.780 --> 00:01:11.200
+Esta tabla, salida de la herramienta de
+medición del curso, muestra el costo real.
+
+16
+00:01:11.740 --> 00:01:17.530
+La fila con un búfer de 64 kilobytes
+termina en 129 llamadas, mientras que la
+
+17
+00:01:17.580 --> 00:01:22.100
+del búfer de un byte obliga a más de
+ocho millones de llamadas al sistema.
+
+18
+00:01:22.420 --> 00:01:25.840
+El disco es exactamente el
+mismo en las dos pruebas.
+
+19
+00:01:26.140 --> 00:01:30.350
+Como el descriptor de archivo abstrae por
+completo el destino, no es el hardware
+
+20
+00:01:30.400 --> 00:01:34.650
+el que nos frena. La enorme demora
+la causa directamente la cantidad de
+
+21
+00:01:34.700 --> 00:01:38.120
+llamadas al sistema.
+Piensa en la llamada read.
+
+22
+00:01:38.360 --> 00:01:42.450
+El programa le pide datos al núcleo y la
+llamada devuelve el número exacto de bytes
+
+23
+00:01:42.500 --> 00:01:44.120
+que logró leer.
+
+24
+00:01:44.300 --> 00:01:48.390
+Las reglas son estrictas. Si la llamada llega
+al final del archivo, devuelve exactamente
+
+25
+00:01:48.440 --> 00:01:51.940
+cero. Si hay un error, devuelve menos uno.
+
+26
+00:01:52.240 --> 00:01:55.200
+Pero en programación de sistemas
+hay una advertencia importante.
+
+27
+00:01:55.420 --> 00:01:59.700
+Una llamada read puede devolver menos
+bytes de los que pidió tu programa.
+
+28
+00:01:59.980 --> 00:02:01.820
+Esta lectura parcial ocurre a menudo.
+
+29
+00:02:02.260 --> 00:02:06.410
+El programa puede estar leyendo de un
+socket de red o de una tubería, o el
+
+30
+00:02:06.460 --> 00:02:08.740
+proceso puede ser
+interrumpido por una señal.
+
+31
+00:02:09.160 --> 00:02:13.310
+Como no se sabe cuántos datos
+llegarán, nunca hay que confiar en que
+
+32
+00:02:13.360 --> 00:02:15.920
+una sola llamada read
+traiga un archivo entero.
+
+33
+00:02:16.260 --> 00:02:19.760
+La llamada write tiene
+exactamente la misma limitación.
+
+34
+00:02:19.960 --> 00:02:22.300
+También puede quedarse a medias.
+
+35
+00:02:22.660 --> 00:02:26.550
+Una escritura puede cortarse si la tubería
+o el socket de destino están llenos,
+
+36
+00:02:26.600 --> 00:02:30.060
+o si una señal interrumpe el proceso
+antes de que salgan los datos.
+
+37
+00:02:30.620 --> 00:02:33.460
+Este código muestra la
+contramedida obligatoria en C.
+
+38
+00:02:33.620 --> 00:02:37.680
+Un bucle while llama a write una y otra
+vez hasta enviar todos los bytes pedidos.
+
+39
+00:02:37.960 --> 00:02:42.390
+El laboratorio lo exige: pone read dentro de
+un bucle infinito para reintentar y construye
+
+40
+00:02:42.440 --> 00:02:46.060
+envoltorios robustos como
+read_exact y write_all.
+
+41
+00:02:46.680 --> 00:02:50.810
+Asegurar una entrada y salida robustas
+obliga a los programas a repetir en bucle.
+
+42
+00:02:50.860 --> 00:02:54.500
+Y ese bucle multiplica directamente
+el número de llamadas al sistema.
+
+43
+00:02:54.800 --> 00:02:59.190
+Cada vez que tu programa llama a read o a
+write, la CPU tiene que detener la ejecución
+
+44
+00:02:59.240 --> 00:03:03.600
+en modo usuario. Luego salta la frontera
+de privilegios hasta el modo núcleo.
+
+45
+00:03:03.960 --> 00:03:06.700
+Este viaje de ida y vuelta
+obligatorio es un cambio de contexto.
+
+46
+00:03:06.980 --> 00:03:10.470
+Guardar los registros y validar los
+argumentos tiene un costo de tiempo
+
+47
+00:03:10.520 --> 00:03:14.320
+inevitable. En el equipo
+del curso medimos ese peaje.
+
+48
+00:03:14.500 --> 00:03:19.340
+Cuesta unos 0,7 microsegundos
+por cada vuelta de read y write.
+
+49
+00:03:19.540 --> 00:03:24.390
+El sistema operativo cobra el mismo peaje
+de 0,7 microsegundos tanto si la llamada
+
+50
+00:03:24.440 --> 00:03:27.500
+lleva muchísimos datos como
+si lleva un solo byte.
+
+51
+00:03:27.800 --> 00:03:31.070
+El verdadero cuello de botella nunca
+es la cantidad de datos que se mueven.
+
+52
+00:03:31.120 --> 00:03:34.520
+Es la cantidad de cruces de frontera
+que hacen falta para moverlos.
+
+53
+00:03:34.780 --> 00:03:38.550
+Volvamos al misterio del principio, los
+ocho megabytes, y apliquemos esta cuenta
+
+54
+00:03:38.600 --> 00:03:40.280
+al caso del búfer de un byte.
+
+55
+00:03:40.620 --> 00:03:44.910
+Mover ocho megabytes de a un byte
+obliga al programa a cruzar la frontera
+
+56
+00:03:44.960 --> 00:03:49.720
+8,4 millones de veces. Por
+eso tarda varios segundos.
+
+57
+00:03:50.300 --> 00:03:52.730
+Compáralo con el búfer de 64 kilobytes.
+
+58
+00:03:52.780 --> 00:03:59.530
+Lleva los mismos ocho megabytes
+de datos, pero solo necesita 129
+
+59
+00:03:59.580 --> 00:04:05.670
+vueltas. Como el programa paga el peaje
+del cambio de contexto solo 129 veces, el
+
+60
+00:04:05.720 --> 00:04:09.180
+tiempo total baja a
+menos de un milisegundo.
+
+61
+00:04:09.660 --> 00:04:13.120
+De ahí sale la regla de oro de
+la arquitectura de sistemas.
+
+62
+00:04:13.340 --> 00:04:16.320
+Nunca trabajes de a un
+byte dentro de un bucle.
+
+63
+00:04:16.540 --> 00:04:20.770
+Junta siempre los datos en búferes
+de unos kilobytes o más para reducir
+
+64
+00:04:20.820 --> 00:04:24.280
+los viajes al núcleo. No siempre
+tienes que hacerlo a mano.
+
+65
+00:04:24.820 --> 00:04:28.630
+La biblioteca estándar de C
+aplica esta regla automáticamente
+
+66
+00:04:28.680 --> 00:04:31.740
+cuando usas funciones
+como printf o fwrite.
+
+67
+00:04:32.520 --> 00:04:38.430
+Repasemos. Pregunta uno: ¿qué devuelve
+read cuando llega al final de
+
+68
+00:04:38.480 --> 00:04:41.140
+un archivo? Devuelve cero.
+
+69
+00:04:42.060 --> 00:04:46.780
+Pregunta dos: ¿por qué copiar un
+archivo de a un byte tarda tanto?
+
+70
+00:04:47.080 --> 00:04:51.920
+Porque cada llamada al sistema paga un peaje fijo
+de tiempo para cruzar la frontera de privilegios.
+
+71
+00:04:52.580 --> 00:04:59.360
+Ahora abre las animaciones A2.3 y A2.4
+en el aula y haz el laboratorio TD1.

@@ -1,0 +1,305 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.430
+Cuando ejecutas un programa sencillo en C en un
+equipo con Linux, funciona por completo en modo
+
+2
+00:00:08.480 --> 00:00:13.510
+usuario, o anillo 3. Es un entorno
+aislado donde el programa no tiene ningún
+
+3
+00:00:13.560 --> 00:00:18.170
+poder. Por sí solo, no puede tocar
+el disco, no puede leer la red y
+
+4
+00:00:18.220 --> 00:00:19.660
+no puede escribir en la pantalla.
+
+5
+00:00:20.040 --> 00:00:24.430
+Para hacer algo útil, como imprimir un
+saludo, un programa tiene que llegar
+
+6
+00:00:24.480 --> 00:00:29.490
+al hardware. Pero el núcleo del sistema
+operativo está debajo de esta frontera, en el
+
+7
+00:00:29.540 --> 00:00:32.480
+anillo 0, como un estricto
+guardia de frontera.
+
+8
+00:00:32.590 --> 00:00:36.350
+Si un programa intenta saltarse la frontera
+de privilegios y acceder al hardware
+
+9
+00:00:36.400 --> 00:00:40.750
+directamente, el procesador lanza
+una excepción y el núcleo termina el
+
+10
+00:00:40.800 --> 00:00:45.950
+proceso de inmediato. Como el acceso directo
+está bloqueado, el programa tiene que
+
+11
+00:00:46.000 --> 00:00:48.860
+pedirle al núcleo, de forma
+segura, que haga la acción por él.
+
+12
+00:00:49.260 --> 00:00:51.220
+Esa petición es una llamada al sistema.
+
+13
+00:00:51.560 --> 00:00:55.390
+Cuando tu programa usa la función write
+de C, en realidad llama a un envoltorio
+
+14
+00:00:55.440 --> 00:00:58.620
+de la biblioteca estándar de C, glibc.
+
+15
+00:00:58.900 --> 00:01:02.850
+Debajo de ese envoltorio, tiene que seguir una
+convención rígida del hardware para cruzar la
+
+16
+00:01:02.900 --> 00:01:06.990
+frontera. Lo vemos en las
+instrucciones exactas de ensamblador
+
+17
+00:01:07.040 --> 00:01:10.220
+que usa el programa
+para preparar el cruce.
+
+18
+00:01:10.540 --> 00:01:14.710
+Esta secuencia de instrucciones
+es el protocolo innegociable para
+
+19
+00:01:14.760 --> 00:01:17.660
+cruzar con seguridad la frontera
+de privilegios del sistema.
+
+20
+00:01:18.000 --> 00:01:22.190
+Antes de cruzar, el envoltorio de
+glibc mete los datos de la petición en
+
+21
+00:01:22.240 --> 00:01:27.740
+registros concretos de la CPU, según la
+convención estricta de Linux en x86-64.
+
+22
+00:01:27.920 --> 00:01:31.400
+Primero, el número de
+llamada va al registro RAX.
+
+23
+00:01:31.520 --> 00:01:35.400
+Aquí, el envoltorio usa el número uno para
+indicar la llamada al sistema correcta.
+
+24
+00:01:35.600 --> 00:01:40.160
+Los demás argumentos van a RDI, RSI y RDX.
+
+25
+00:01:40.380 --> 00:01:42.350
+Fíjate en un detalle clave de seguridad.
+
+26
+00:01:42.400 --> 00:01:45.480
+El texto en sí no viaja
+dentro de los registros.
+
+27
+00:01:45.700 --> 00:01:49.960
+El registro RSI solo lleva la dirección
+donde está el texto en memoria.
+
+28
+00:01:50.160 --> 00:01:54.100
+El momento decisivo llega cuando el
+programa ejecuta la instrucción syscall.
+
+29
+00:01:54.300 --> 00:02:00.300
+Esa instrucción obliga a la CPU a pasar
+al instante a modo núcleo, al anillo 0.
+
+30
+00:02:00.780 --> 00:02:05.190
+La ejecución salta a una dirección fija
+que el núcleo configuró durante el
+
+31
+00:02:05.240 --> 00:02:11.430
+arranque: entry_SYSCALL_64. El programa
+no controla este punto de llegada.
+
+32
+00:02:11.480 --> 00:02:13.280
+No puede elegir adónde salta.
+
+33
+00:02:13.820 --> 00:02:18.100
+Una vez debajo de la frontera, el núcleo
+toma el control total de la petición.
+
+34
+00:02:18.440 --> 00:02:21.570
+Recuerda: el núcleo es el
+corazón del sistema operativo.
+
+35
+00:02:21.620 --> 00:02:27.980
+No es un proceso. El núcleo lee el
+registro RAX y lo usa como índice.
+
+36
+00:02:28.160 --> 00:02:32.790
+Ese valor, uno, apunta a una fila de la
+tabla de llamadas al sistema, que activa el
+
+37
+00:02:32.840 --> 00:02:35.000
+manejador correcto: ksys_write.
+
+38
+00:02:35.460 --> 00:02:38.060
+El núcleo no se fía a
+ciegas de la petición.
+
+39
+00:02:38.280 --> 00:02:41.360
+Primero, el manejador valida el
+descriptor de archivo y los argumentos.
+
+40
+00:02:41.760 --> 00:02:47.010
+Luego, el núcleo usa una función llamada
+copy_from_user para traer con seguridad el texto
+
+41
+00:02:47.060 --> 00:02:50.120
+desde la dirección de memoria que
+dio el programa, en el que no confía.
+
+42
+00:02:50.500 --> 00:02:54.930
+Al obligar al programa a usar una tabla
+rígida y al leer él mismo la memoria, el
+
+43
+00:02:54.980 --> 00:02:58.700
+núcleo garantiza que ningún código
+malicioso del usuario pueda secuestrarlo.
+
+44
+00:02:59.060 --> 00:03:01.920
+Por último, el controlador
+muestra el texto en la pantalla.
+
+45
+00:03:02.520 --> 00:03:06.730
+Terminada la tarea del hardware, el
+viaje acaba devolviendo el control
+
+46
+00:03:06.780 --> 00:03:11.450
+al programa. El procesador ejecuta la
+instrucción sysret, que baja los privilegios
+
+47
+00:03:11.500 --> 00:03:16.040
+de la CPU y devuelve la ejecución al otro
+lado de la frontera, al modo usuario.
+
+48
+00:03:16.220 --> 00:03:20.690
+El resultado numérico de la llamada
+al sistema vuelve en el registro
+
+49
+00:03:20.740 --> 00:03:25.310
+RAX. Pero ¿cómo sabe el programa si
+el núcleo tuvo un problema, como un
+
+50
+00:03:25.360 --> 00:03:31.330
+descriptor de archivo inválido? Si RAX
+vuelve con un valor entre menos 4095 y menos
+
+51
+00:03:31.380 --> 00:03:35.760
+uno, el envoltorio de glibc
+reconoce ese rango como un error.
+
+52
+00:03:36.000 --> 00:03:38.050
+El envoltorio se lo
+simplifica al programador.
+
+53
+00:03:38.100 --> 00:03:42.890
+Cambia el valor devuelto por exactamente
+menos uno y guarda el código de error real
+
+54
+00:03:42.940 --> 00:03:45.120
+en una variable llamada errno.
+
+55
+00:03:45.280 --> 00:03:50.290
+Como cada llamada al sistema es un viaje complejo
+a través de una frontera vigilada, puede
+
+56
+00:03:50.340 --> 00:03:56.330
+fallar. Por eso los programas del curso
+envuelven cada llamada en exit_if y
+
+57
+00:03:56.380 --> 00:04:00.600
+usan perror para traducir
+errno en un mensaje legible.
+
+58
+00:04:01.220 --> 00:04:06.570
+Repasemos. ¿Qué instrucción de la CPU
+pasa la ejecución de modo usuario a modo
+
+59
+00:04:06.620 --> 00:04:07.360
+núcleo?
+
+60
+00:04:10.040 --> 00:04:16.330
+La instrucción syscall. ¿El registro RSI
+lleva el texto que se va a imprimir o su
+
+61
+00:04:16.380 --> 00:04:17.460
+dirección de memoria?
+
+62
+00:04:20.290 --> 00:04:22.170
+Lleva la dirección de memoria.
+
+63
+00:04:22.410 --> 00:04:29.030
+Ahora abre la animación A2.1 en el aula y
+haz el ejercicio uno del laboratorio TD1.

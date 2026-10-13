@@ -1,0 +1,322 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:05.200
+Mira este montaje sencillo.
+
+2
+00:00:05.580 --> 00:00:09.610
+Tenemos un proceso normal que intenta
+leer un archivo con exactamente ocho
+
+3
+00:00:09.660 --> 00:00:11.880
+caracteres de datos, de la A a la H.
+
+4
+00:00:12.120 --> 00:00:17.030
+En la primera prueba, el proceso usa la
+llamada open dos veces sobre el mismo archivo
+
+5
+00:00:17.080 --> 00:00:19.300
+y obtiene dos descriptores
+de archivo distintos.
+
+6
+00:00:19.600 --> 00:00:23.500
+Si leemos cuatro bytes del primer
+descriptor, obtenemos ABCD.
+
+7
+00:00:23.640 --> 00:00:27.710
+Si leemos cuatro bytes del segundo,
+obtenemos exactamente el mismo texto.
+
+8
+00:00:27.760 --> 00:00:31.280
+La salida final es ABCD, ABCD.
+
+9
+00:00:31.680 --> 00:00:34.500
+Ahora cambiemos una sola línea de código.
+
+10
+00:00:34.780 --> 00:00:39.010
+En vez de abrir el archivo por segunda
+vez, usamos la llamada dup para
+
+11
+00:00:39.060 --> 00:00:40.720
+duplicar el primer descriptor.
+
+12
+00:00:40.980 --> 00:00:45.890
+La primera lectura sigue dando ABCD, pero
+la segunda continúa justo donde quedó
+
+13
+00:00:45.940 --> 00:00:48.640
+la primera y lee EFGH.
+
+14
+00:00:48.980 --> 00:00:52.080
+Ahora la salida final es ABCD, EFGH.
+
+15
+00:00:52.520 --> 00:00:56.700
+¿Por qué cambiar una sola llamada al sistema
+altera por completo la lectura del archivo?
+
+16
+00:00:56.920 --> 00:01:00.300
+Para responder, hay que mirar debajo
+de la frontera de privilegios.
+
+17
+00:01:00.680 --> 00:01:03.260
+Veamos la arquitectura
+del sistema operativo.
+
+18
+00:01:03.760 --> 00:01:07.180
+Encima de la frontera está el modo
+usuario, donde corre nuestro programa.
+
+19
+00:01:07.400 --> 00:01:11.130
+Debajo de la línea está el modo núcleo, donde
+el núcleo controla estrictamente el acceso al
+
+20
+00:01:11.180 --> 00:01:15.900
+hardware. Cuando lees un archivo, tu
+proceso depende de tres tablas ocultas.
+
+21
+00:01:16.120 --> 00:01:18.120
+La primera es la tabla de descriptores.
+
+22
+00:01:18.180 --> 00:01:21.860
+El núcleo mantiene una tabla de
+descriptores propia para cada proceso.
+
+23
+00:01:22.380 --> 00:01:24.960
+Luego, la tabla de archivos
+abiertos, común a todo el sistema.
+
+24
+00:01:25.100 --> 00:01:29.250
+Esta tabla guarda el desplazamiento actual:
+la posición exacta del byte donde ocurrirá la
+
+25
+00:01:29.300 --> 00:01:31.500
+siguiente lectura o escritura.
+
+26
+00:01:31.960 --> 00:01:35.340
+Por último, abajo del todo, está
+la tabla de inodos en memoria.
+
+27
+00:01:35.460 --> 00:01:39.780
+Es la única representación activa de los
+metadatos del archivo, cargada en la RAM.
+
+28
+00:01:40.080 --> 00:01:44.650
+Cuando un programa llama dos veces a open, el
+núcleo crea dos entradas totalmente separadas
+
+29
+00:01:44.700 --> 00:01:49.210
+en la tabla de archivos abiertos. Cada entrada
+tiene su propio desplazamiento, que empieza en
+
+30
+00:01:49.260 --> 00:01:53.240
+cero. Por eso los dos descriptores
+leen el principio del archivo.
+
+31
+00:01:53.620 --> 00:01:55.700
+La llamada dup funciona de otra manera.
+
+32
+00:01:55.860 --> 00:01:58.600
+Simplemente copia el puntero
+en la tabla de descriptores.
+
+33
+00:01:58.820 --> 00:02:02.820
+Ahora los dos descriptores apuntan a la misma
+entrada de la tabla de archivos abiertos.
+
+34
+00:02:03.040 --> 00:02:07.200
+Como comparten una sola descripción de
+archivo abierto, comparten el desplazamiento.
+
+35
+00:02:07.420 --> 00:02:10.980
+Cuando una lectura avanza la posición,
+el otro descriptor ve el cambio.
+
+36
+00:02:11.120 --> 00:02:15.810
+Es exactamente el mecanismo que usa tu shell
+cuando redirige la salida de error y la
+
+37
+00:02:15.860 --> 00:02:18.000
+salida estándar a un
+único archivo de registro.
+
+38
+00:02:18.400 --> 00:02:22.550
+Fíjate en lo que pasa con esta estructura si
+un archivo tiene inodo pero ningún bloque
+
+39
+00:02:22.600 --> 00:02:26.520
+de datos en el disco. Es una
+FIFO, o tubería con nombre.
+
+40
+00:02:26.860 --> 00:02:31.910
+En lugar de escribir en un disco, una FIFO hace
+pasar los datos por un búfer de 64 kilobytes
+
+41
+00:02:31.960 --> 00:02:35.320
+que está por completo en
+la memoria del núcleo.
+
+42
+00:02:35.600 --> 00:02:39.630
+Como esta tubería vive en memoria, impone
+reglas estrictas para mantener los datos
+
+43
+00:02:39.680 --> 00:02:45.100
+sincronizados. Si un proceso llama a open
+para leer una FIFO, se bloquea a propósito.
+
+44
+00:02:45.320 --> 00:02:48.940
+El núcleo lo hace esperar hasta que otro
+proceso abra la tubería para escribir.
+
+45
+00:02:49.360 --> 00:02:52.700
+Una vez hecha la conexión, la
+escritura está muy regulada.
+
+46
+00:02:52.960 --> 00:02:57.540
+En Linux, toda escritura de
+4096 bytes o menos es atómica.
+
+47
+00:02:57.780 --> 00:03:01.870
+El núcleo coloca estos bloques limpiamente
+y garantiza que los mensajes de distintos
+
+48
+00:03:01.920 --> 00:03:03.440
+escritores nunca se mezclen.
+
+49
+00:03:05.080 --> 00:03:09.330
+Y cuando el último escritor cierra su
+descriptor, el lector recibe simplemente un cero,
+
+50
+00:03:09.380 --> 00:03:11.260
+que indica el final del archivo.
+
+51
+00:03:11.660 --> 00:03:16.390
+El núcleo gestiona la compleja comunicación
+entre procesos con la misma arquitectura de tres
+
+52
+00:03:16.440 --> 00:03:19.880
+tablas, incluso cuando no
+hay disco de por medio.
+
+53
+00:03:20.260 --> 00:03:22.720
+Pongamos a prueba estas
+reglas con un caso práctico.
+
+54
+00:03:23.020 --> 00:03:27.730
+¿Qué pasa si creamos una FIFO en una carpeta
+compartida por red e intentamos usarla como
+
+55
+00:03:27.780 --> 00:03:30.220
+tubería de chat entre
+dos portátiles distintos?
+
+56
+00:03:30.420 --> 00:03:35.050
+La conexión falla. Una carpeta compartida
+por red solo difunde el nombre del archivo
+
+57
+00:03:35.100 --> 00:03:38.800
+a las otras máquinas. No puede compartir
+la memoria del núcleo que hay debajo.
+
+58
+00:03:39.100 --> 00:03:43.430
+Cuando cada portátil abre esa ruta de
+red, su sistema operativo local crea
+
+59
+00:03:43.480 --> 00:03:46.440
+su propio búfer aislado de 64 kilobytes.
+
+60
+00:03:46.700 --> 00:03:48.880
+Las dos máquinas nunca
+llegan a conectarse.
+
+61
+00:03:49.140 --> 00:03:54.150
+Un archivo es un objeto vivo, gestionado de forma
+activa y exclusiva dentro de los límites del
+
+62
+00:03:54.200 --> 00:03:56.620
+núcleo de una máquina local. Repasemos.
+
+63
+00:03:56.880 --> 00:04:01.210
+Cuando un proceso llama a dup, ¿qué entrada del
+núcleo se comparte para mantener el desplazamiento
+
+64
+00:04:01.260 --> 00:04:07.430
+sincronizado? La descripción de archivo abierto.
+¿Por qué una FIFO no puede conectar dos
+
+65
+00:04:07.480 --> 00:04:09.960
+computadores a través de una
+unidad de red compartida?
+
+66
+00:04:10.340 --> 00:04:15.480
+Porque la tubería existe por completo en el
+núcleo de la máquina local, no en el disco.
+
+67
+00:04:15.980 --> 00:04:23.020
+Ahora abre las animaciones A3.2 y A3.3
+en el aula y haz el laboratorio TD2.

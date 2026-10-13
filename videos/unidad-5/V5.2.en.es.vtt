@@ -1,0 +1,241 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:07.650
+Cuando escribes en la terminal un
+comando de varias partes, parece una sola
+
+2
+00:00:07.700 --> 00:00:12.870
+operación continua. Pero en realidad la shell
+divide esa línea en tres programas distintos
+
+3
+00:00:12.920 --> 00:00:17.810
+y totalmente independientes. Estos tres
+procesos se ejecutan en modo usuario.
+
+4
+00:00:17.860 --> 00:00:22.390
+Están encima de la estricta frontera de
+privilegios, completamente aislados entre sí.
+
+5
+00:00:22.440 --> 00:00:28.450
+Abajo, en modo núcleo, el sistema operativo
+crea tuberías sin nombre: búferes circulares
+
+6
+00:00:28.500 --> 00:00:34.050
+de memoria que sirven para pasar datos. Para cualquier
+secuencia de n comandos, el sistema construye n
+
+7
+00:00:34.100 --> 00:00:39.470
+menos 1 tuberías. Por ahora, los programas en
+modo usuario y las tuberías del núcleo están
+
+8
+00:00:39.520 --> 00:00:44.050
+totalmente desconectados. Los datos no pueden
+circular hasta conectarlos en una secuencia
+
+9
+00:00:44.100 --> 00:00:49.670
+precisa. Una tubería de comandos es
+una obra compleja: la shell tiene que
+
+10
+00:00:49.720 --> 00:00:54.850
+orquestar cada conexión antes de que se
+mueva un solo byte. La shell lo resuelve
+
+11
+00:00:54.900 --> 00:01:00.310
+comando por comando. Empieza con una
+llamada al sistema pipe que crea el primer
+
+12
+00:01:00.360 --> 00:01:05.670
+búfer circular en el núcleo. Después, la
+shell ejecuta fork y duplica su propio
+
+13
+00:01:05.720 --> 00:01:10.650
+proceso para crear un trabajador para el primer
+comando. Este proceso hijo tiene que dirigir su
+
+14
+00:01:10.700 --> 00:01:16.290
+salida al nuevo canal. Usa dup2 para copiar el
+puntero y reemplaza su descriptor de salida
+
+15
+00:01:16.340 --> 00:01:20.090
+estándar por una conexión directa al
+extremo de escritura de la tubería.
+
+16
+00:01:20.140 --> 00:01:25.290
+Como el hijo hereda del padre todos
+los descriptores abiertos, ahora cierra
+
+17
+00:01:25.340 --> 00:01:30.250
+los extremos que no va a usar y corta las
+conexiones sobrantes. Con su salida ya fija en
+
+18
+00:01:30.300 --> 00:01:36.270
+la tubería, el hijo ejecuta execvp: el proceso
+de la shell se reemplaza por completo por
+
+19
+00:01:36.320 --> 00:01:41.730
+el programa de destino, ls. De vuelta en
+la shell padre, sigue la limpieza: la
+
+20
+00:01:41.780 --> 00:01:45.930
+shell cierra el extremo de escritura
+de la tubería que le pasó al hijo
+
+21
+00:01:45.980 --> 00:01:52.050
+y se queda solo con el extremo de lectura para la
+siguiente vuelta. Esta combinación de dup2 y execvp permite
+
+22
+00:01:52.100 --> 00:01:56.850
+que programas normales escriban a ciegas en tuberías
+del núcleo. ls simplemente escribe en la salida
+
+23
+00:01:56.900 --> 00:02:01.810
+estándar, sin saber que la shell
+redirigió esa salida a una tubería. La
+
+24
+00:02:01.860 --> 00:02:06.030
+shell repite exactamente esta secuencia
+con el resto de los comandos: crea nuevos
+
+25
+00:02:06.080 --> 00:02:10.910
+hijos, redirige sus descriptores de
+entrada y salida y los transforma en
+
+26
+00:02:10.960 --> 00:02:17.890
+grep y wc. De aquí sale la regla de oro de
+las tuberías: cada tubería debe terminar con
+
+27
+00:02:17.940 --> 00:02:22.410
+exactamente un descriptor de escritura y uno
+de lectura abiertos entre los dos procesos
+
+28
+00:02:22.460 --> 00:02:28.030
+que la usan. Si la shell padre o un
+proceso hijo no cierra un solo descriptor
+
+29
+00:02:28.080 --> 00:02:33.330
+sin uso durante el bucle, queda un escritor
+de más conectado a la tubería. Cuando
+
+30
+00:02:33.380 --> 00:02:37.190
+un descriptor de escritura de más sigue abierto,
+el núcleo supone que pueden llegar más datos;
+
+31
+00:02:37.240 --> 00:02:42.150
+por eso nunca envía la señal de fin de archivo.
+Esta sección de la guía del laboratorio
+
+32
+00:02:42.200 --> 00:02:47.510
+plantea un ejercicio en el que se quita a
+propósito un solo close. Sin la señal de fin
+
+33
+00:02:47.560 --> 00:02:52.110
+de archivo, el último comando de la tubería
+espera datos indefinidamente y se produce un
+
+34
+00:02:52.160 --> 00:02:57.810
+interbloqueo. Las tuberías fallan en silencio:
+un solo close olvidado provoca una espera
+
+35
+00:02:57.860 --> 00:03:03.470
+infinita. Con todos los descriptores bien conectados
+y los extremos sin uso cerrados, la shell se hace
+
+36
+00:03:03.520 --> 00:03:08.550
+a un lado. Los datos circulan sin parar a través de
+la frontera de privilegios: salen de un proceso,
+
+37
+00:03:08.600 --> 00:03:13.830
+pasan por la tubería del núcleo y entran en el
+siguiente. La última tarea obligatoria de la shell es
+
+38
+00:03:13.880 --> 00:03:18.590
+esperar. Tiene que seguir y registrar
+la terminación de cada proceso hijo;
+
+39
+00:03:18.640 --> 00:03:23.890
+si no lo hace, esos procesos terminados se
+quedan en el sistema como zombis. Para saber
+
+40
+00:03:23.940 --> 00:03:28.390
+si toda la operación tuvo éxito o falló,
+la shell toma el estado de salida
+
+41
+00:03:28.440 --> 00:03:32.690
+del último comando de la cadena. La
+barra vertical que escribes en la
+
+42
+00:03:32.740 --> 00:03:36.470
+terminal depende por completo de una gestión
+rigurosa de los descriptores y de la composición
+
+43
+00:03:36.520 --> 00:03:41.210
+de procesos. Repasemos. Si una
+tubería tiene cuatro comandos,
+
+44
+00:03:41.260 --> 00:03:43.900
+¿cuántas tuberías crea
+la shell en el núcleo?
+
+45
+00:03:44.280 --> 00:03:50.470
+Tres. n comandos siempre necesitan n
+menos 1 tuberías. Segunda pregunta: ¿qué
+
+46
+00:03:50.520 --> 00:03:55.210
+pasa si un proceso padre olvida cerrar un
+descriptor de escritura sin uso? El último
+
+47
+00:03:55.260 --> 00:03:59.750
+comando espera un fin de archivo que nunca
+llega y se produce un interbloqueo. Ahora abre
+
+48
+00:03:59.800 --> 00:04:04.400
+la animación A5.1 en el aula
+y haz el laboratorio TD4.

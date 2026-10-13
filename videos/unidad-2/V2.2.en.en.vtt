@@ -1,0 +1,348 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.320
+Imagine two identical computers,
+copying the exact same 8-megabyte file.
+
+2
+00:00:08.600 --> 00:00:14.000
+One finishes instantly. The other
+creeps along, taking several seconds.
+
+3
+00:00:14.460 --> 00:00:19.310
+We are looking at a gap of less than a
+millisecond compared to seconds of agonizing
+
+4
+00:00:19.360 --> 00:00:23.660
+delay. Both programs use
+the exact same logic.
+
+5
+00:00:23.780 --> 00:00:28.010
+The only altered variable is the size of
+the memory buffer they use to hold the
+
+6
+00:00:28.060 --> 00:00:33.410
+data. How does changing the size of a
+single buffer dictate the speed of a basic
+
+7
+00:00:33.460 --> 00:00:38.590
+input and output task? To find the answer,
+we have to look closely at how a process
+
+8
+00:00:38.640 --> 00:00:41.240
+actually communicates with
+the operating system.
+
+9
+00:00:41.700 --> 00:00:46.670
+Every process is born with three open file
+descriptors, zero for standard input, one
+
+10
+00:00:46.720 --> 00:00:49.740
+for standard output, and
+two for standard error.
+
+11
+00:00:50.180 --> 00:00:53.830
+The running program is blind to what
+these numbers actually represent.
+
+12
+00:00:53.880 --> 00:00:57.160
+It merely uses the integers
+to request or send data.
+
+13
+00:00:57.400 --> 00:01:01.790
+It is the shell that assigns meaning to
+these descriptors using operators like less
+
+14
+00:01:01.840 --> 00:01:06.260
+than or greater than. The shell maps
+them to a file, a terminal, or a pipe.
+
+15
+00:01:06.780 --> 00:01:11.200
+This output table from the course bench
+tool shows the real performance cost.
+
+16
+00:01:11.740 --> 00:01:17.530
+Notice the row using a 64-kilobyte buffer
+completes the task in 129 calls, while the
+
+17
+00:01:17.580 --> 00:01:22.100
+one-byte buffer row forces over eight
+million individual calls to the system.
+
+18
+00:01:22.420 --> 00:01:25.840
+The physical storage drive is
+exactly the same in both tests.
+
+19
+00:01:26.140 --> 00:01:30.350
+Because the file descriptor completely
+abstracts the destination, the hardware isn't
+
+20
+00:01:30.400 --> 00:01:34.650
+slowing us down. The massive delay is caused
+directly by the sheer volume of those
+
+21
+00:01:34.700 --> 00:01:38.120
+system calls. Think about
+the read system call.
+
+22
+00:01:38.360 --> 00:01:42.450
+The program asks the kernel for data and
+the call returns the exact number of bytes
+
+23
+00:01:42.500 --> 00:01:44.120
+it successfully retrieved.
+
+24
+00:01:44.300 --> 00:01:48.390
+The rules are strict. If the call reaches
+the end of a file, it returns exactly
+
+25
+00:01:48.440 --> 00:01:51.940
+zero. If an error occurs,
+it returns negative one.
+
+26
+00:01:52.240 --> 00:01:55.200
+But there is a major caveat
+in systems programming.
+
+27
+00:01:55.420 --> 00:01:59.700
+A read call might return fewer bytes
+than your program originally requested.
+
+28
+00:01:59.980 --> 00:02:01.820
+This partial read happens frequently.
+
+29
+00:02:02.260 --> 00:02:06.410
+The program might be pulling data from
+a network socket, reading a pipe, or the
+
+30
+00:02:06.460 --> 00:02:08.740
+process might be interrupted by a signal.
+
+31
+00:02:09.160 --> 00:02:13.310
+Because the actual payload size is
+unpredictable, developers can never trust a
+
+32
+00:02:13.360 --> 00:02:15.920
+single read call to fetch an entire file.
+
+33
+00:02:16.260 --> 00:02:19.760
+The write system call suffers
+from the exact same limitation.
+
+34
+00:02:19.960 --> 00:02:22.300
+It's equally vulnerable
+to partial transfers.
+
+35
+00:02:22.660 --> 00:02:26.550
+A write can easily be cut short if the
+receiving pipe or socket is completely full,
+
+36
+00:02:26.600 --> 00:02:30.060
+or if a signal interrupts the
+process before the data leaves.
+
+37
+00:02:30.620 --> 00:02:33.460
+This code shows the
+mandatory C countermeasure.
+
+38
+00:02:33.620 --> 00:02:37.680
+A while loop repeatedly calls write
+until all requested bytes are pushed out.
+
+39
+00:02:37.960 --> 00:02:42.390
+The lab enforces this, placing read inside
+an infinite loop for retries, building
+
+40
+00:02:42.440 --> 00:02:46.060
+robust wrappers like
+read_exact and write_all.
+
+41
+00:02:46.680 --> 00:02:50.810
+Ensuring robust input and output forces
+programs into continuous looping.
+
+42
+00:02:50.860 --> 00:02:54.500
+That looping directly multiplies
+the number of system calls executed.
+
+43
+00:02:54.800 --> 00:02:59.190
+Every time your program calls read and write,
+the CPU must physically halt execution
+
+44
+00:02:59.240 --> 00:03:03.600
+in user mode. It then jumps across the
+privilege boundary down to kernel mode.
+
+45
+00:03:03.960 --> 00:03:06.700
+This mandatory round trip
+is a context switch.
+
+46
+00:03:06.980 --> 00:03:10.470
+Saving the registers and validating the
+arguments incurs an unavoidable time
+
+47
+00:03:10.520 --> 00:03:14.320
+penalty. On the course machine,
+we measured this exact toll.
+
+48
+00:03:14.500 --> 00:03:19.340
+It costs roughly 0.7 microseconds for
+every single read and write iteration.
+
+49
+00:03:19.540 --> 00:03:24.390
+The operating system charges this exact
+same 0.7 microsecond toll whether the call
+
+50
+00:03:24.440 --> 00:03:27.500
+transports a massive payload
+or just a single byte.
+
+51
+00:03:27.800 --> 00:03:31.070
+The true bottleneck is never
+the volume of data being moved.
+
+52
+00:03:31.120 --> 00:03:34.520
+It is the volume of boundary
+crossings required to move it.
+
+53
+00:03:34.780 --> 00:03:38.550
+We can now return to our opening eight
+megabyte mystery and apply this toll math to
+
+54
+00:03:38.600 --> 00:03:40.280
+the one-byte buffer scenario.
+
+55
+00:03:40.620 --> 00:03:44.910
+Moving eight megabytes, one byte at a time,
+forces the program to cross the boundary
+
+56
+00:03:44.960 --> 00:03:49.720
+8.4 million times. That is why it
+takes several seconds to finish.
+
+57
+00:03:50.300 --> 00:03:52.730
+Contrast this with the 64-kilobyte buffer.
+
+58
+00:03:52.780 --> 00:03:59.530
+It transports the exact same eight megabytes
+of data but it requires only 129 total
+
+59
+00:03:59.580 --> 00:04:05.670
+iterations. Because the program only pays
+the context switch toll 129 times, the
+
+60
+00:04:05.720 --> 00:04:09.180
+total operation time drops
+to less than a millisecond.
+
+61
+00:04:09.660 --> 00:04:13.120
+This gives us the golden
+rule of system architecture.
+
+62
+00:04:13.340 --> 00:04:16.320
+Never operate one byte
+at a time in a loop.
+
+63
+00:04:16.540 --> 00:04:20.770
+Always aggregate your data into buffers
+of a few kilobytes or more to minimize
+
+64
+00:04:20.820 --> 00:04:24.280
+kernel trips. You do not always
+have to do this manually.
+
+65
+00:04:24.820 --> 00:04:28.630
+Standard C libraries apply this buffering
+rule automatically under the hood when
+
+66
+00:04:28.680 --> 00:04:31.740
+utilizing functions like printf or fwrite.
+
+67
+00:04:32.520 --> 00:04:38.430
+Let's review. Question one, what does a
+read call return when it reaches the end of
+
+68
+00:04:38.480 --> 00:04:41.140
+a file? It returns zero.
+
+69
+00:04:42.060 --> 00:04:46.780
+Question two, why does copying a file
+one byte at a time take so long?
+
+70
+00:04:47.080 --> 00:04:51.920
+Because every system call pays a fixed
+time toll to cross the privilege boundary.
+
+71
+00:04:52.580 --> 00:04:59.360
+Now open animations A2.3 and A2.4
+in the course hub and run lab TD1.

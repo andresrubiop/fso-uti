@@ -1,0 +1,322 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.960
+A thread is a sequential
+execution inside a process.
+
+2
+00:00:07.320 --> 00:00:11.010
+Because threads share the same address
+space, they can pass data to each other
+
+3
+00:00:11.060 --> 00:00:16.530
+extremely fast. We can see this inside a
+process running in user mode, operating
+
+4
+00:00:16.580 --> 00:00:20.910
+safely above the kernel's privilege boundary
+using a shared area called a bounded
+
+5
+00:00:20.960 --> 00:00:25.860
+buffer. A classic way to move data
+here is the producer-consumer model.
+
+6
+00:00:26.340 --> 00:00:30.290
+Producers generate data and place it into
+the buffer, while consumers read and
+
+7
+00:00:30.340 --> 00:00:34.160
+process it. To coordinate,
+they rely on two semaphores.
+
+8
+00:00:34.500 --> 00:00:38.530
+Before writing, a producer checks a semaphore
+named empty, starting at the total number of
+
+9
+00:00:38.580 --> 00:00:43.510
+buffer cells. Before reading, a consumer
+checks a semaphore named full, starting at
+
+10
+00:00:43.560 --> 00:00:46.840
+zero. If space is available,
+the producer can write.
+
+11
+00:00:47.040 --> 00:00:51.170
+But to prevent a race condition when
+updating the exact same slot, they apply a
+
+12
+00:00:51.220 --> 00:00:54.520
+mutex, locking the shared
+index for exclusive access.
+
+13
+00:00:55.140 --> 00:00:59.330
+When the work is done, the main program
+can send a poison pill, a specific data
+
+14
+00:00:59.380 --> 00:01:03.840
+value flowing through the buffer, signaling
+all threads to gracefully shut down.
+
+15
+00:01:04.280 --> 00:01:08.540
+This system works flawlessly because the
+flow of resources is perfectly linear.
+
+16
+00:01:08.820 --> 00:01:10.580
+Data only moves in one direction.
+
+17
+00:01:11.020 --> 00:01:15.150
+But systems break down quickly when threads
+need to lock multiple resources at the
+
+18
+00:01:15.200 --> 00:01:19.760
+exact same time. We can model this
+problem using five dining philosophers.
+
+19
+00:01:20.120 --> 00:01:21.900
+They sit at a circular table.
+
+20
+00:01:22.080 --> 00:01:26.230
+Between each philosopher sits a single
+chopstick, and every chopstick is protected
+
+21
+00:01:26.280 --> 00:01:29.080
+by a pthread_mutex_lock.
+
+22
+00:01:29.440 --> 00:01:32.540
+To eat their meal, a philosopher
+needs two chopsticks.
+
+23
+00:01:32.880 --> 00:01:37.050
+In our system, this represents a thread
+that requires exclusive access to two
+
+24
+00:01:37.100 --> 00:01:40.120
+different resources
+simultaneously to do its job.
+
+25
+00:01:40.680 --> 00:01:45.310
+The process begins. Every philosopher
+reaches out and successfully uses
+
+26
+00:01:45.360 --> 00:01:48.660
+pthread_mutex_lock to take
+the chopstick on the right.
+
+27
+00:01:48.900 --> 00:01:51.980
+But when they turn to take the
+left chopstick, they hit a wall.
+
+28
+00:01:52.160 --> 00:01:53.900
+It is already held by their neighbor.
+
+29
+00:01:54.100 --> 00:01:56.680
+Every philosopher goes to sleep waiting.
+
+30
+00:01:56.960 --> 00:02:01.750
+The table freezes. This terminal output
+shows exactly what happens when we run this
+
+31
+00:02:01.800 --> 00:02:03.200
+code on the course machine.
+
+32
+00:02:03.440 --> 00:02:05.960
+The threads completely lock up.
+
+33
+00:02:06.060 --> 00:02:10.550
+And after a three-second timeout, the system
+kills the program, generating an exit
+
+34
+00:02:10.600 --> 00:02:12.180
+status of 124.
+
+35
+00:02:13.040 --> 00:02:15.920
+This specific failure
+is called a deadlock.
+
+36
+00:02:16.020 --> 00:02:19.240
+It is a state where a set of
+threads wait for each other forever.
+
+37
+00:02:19.880 --> 00:02:21.970
+A deadlock does not happen randomly.
+
+38
+00:02:22.020 --> 00:02:26.890
+It appears only if four strict rules, known
+as the Coffman conditions, occur at the
+
+39
+00:02:26.940 --> 00:02:30.720
+same time. Condition
+one is mutual exclusion.
+
+40
+00:02:30.980 --> 00:02:34.080
+A chopstick can only be held
+by one philosopher at a time.
+
+41
+00:02:34.780 --> 00:02:36.460
+Condition two is hold and wait.
+
+42
+00:02:36.660 --> 00:02:40.660
+A philosopher holds onto their first
+chopstick while waiting for the second one.
+
+43
+00:02:41.200 --> 00:02:43.040
+Condition three is no preemption.
+
+44
+00:02:43.220 --> 00:02:47.170
+The operating system cannot force a
+philosopher to drop a chopstick they already
+
+45
+00:02:47.220 --> 00:02:50.900
+hold. Condition four is a circular wait.
+
+46
+00:02:51.040 --> 00:02:54.080
+The dependencies form a
+closed loop around the table.
+
+47
+00:02:54.440 --> 00:02:58.260
+If all four of these conditions
+are met, your system will deadlock.
+
+48
+00:02:58.740 --> 00:03:02.790
+Because a deadlock requires all four
+conditions, we can fix our program by breaking
+
+49
+00:03:02.840 --> 00:03:07.230
+just one of them. We will eliminate the
+circular wait by assigning a number to every
+
+50
+00:03:07.280 --> 00:03:10.220
+chopstick. We introduce a global order.
+
+51
+00:03:10.480 --> 00:03:13.040
+Always pick up the
+lowest-numbered chopstick first.
+
+52
+00:03:13.360 --> 00:03:17.440
+The final philosopher, between four
+and zero, now reaches for zero.
+
+53
+00:03:17.760 --> 00:03:20.380
+Since philosopher zero
+holds it, they sleep.
+
+54
+00:03:20.880 --> 00:03:22.280
+Chopstick four remains free.
+
+55
+00:03:22.360 --> 00:03:25.220
+The neighbor takes it,
+eats, and puts both down.
+
+56
+00:03:25.400 --> 00:03:29.760
+The loop is broken. You can break
+deadlocks using other methods too.
+
+57
+00:03:29.880 --> 00:03:33.850
+You can limit how many threads compete at
+once by adding a waiter, or you can have
+
+58
+00:03:33.900 --> 00:03:37.620
+threads release their resources and
+retry using the trylock function.
+
+59
+00:03:38.180 --> 00:03:40.780
+A mutex alone cannot prevent a deadlock.
+
+60
+00:03:41.000 --> 00:03:45.610
+To write safe, concurrent C code, you must
+architect the exact sequence in which
+
+61
+00:03:45.660 --> 00:03:47.440
+your threads acquire their locks.
+
+62
+00:03:48.100 --> 00:03:50.220
+Let's review. Question one.
+
+63
+00:03:50.500 --> 00:03:53.500
+In a bounded buffer, what do
+the two semaphores wait on?
+
+64
+00:03:53.980 --> 00:03:56.540
+They wait on the empty
+slots and the full slots.
+
+65
+00:03:57.220 --> 00:04:01.290
+Question two. Which Coffman condition is
+broken by acquiring locks in a strict
+
+66
+00:04:01.340 --> 00:04:04.040
+numerical order? The circular wait.
+
+67
+00:04:04.280 --> 00:04:10.750
+Now, open animations A7.2 and A7.3
+in the course hub, and run lab
+
+68
+00:04:10.800 --> 00:04:12.180
+TD6.

@@ -1,0 +1,267 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:06.480
+You open a terminal, type
+a command, and hit enter.
+
+2
+00:00:06.700 --> 00:00:12.290
+It feels simple, but top-level programs
+like Bash are entirely blind to physical
+
+3
+00:00:12.340 --> 00:00:17.410
+reality. They have no concept of what a
+disk sector is or how to manipulate the
+
+4
+00:00:17.460 --> 00:00:20.420
+specific electrical signals
+lighting up your monitor.
+
+5
+00:00:20.800 --> 00:00:25.170
+If every program tried to send competing
+electrical signals directly to the hardware
+
+6
+00:00:25.220 --> 00:00:29.280
+at once, the result would be
+immediate conflict and system failure.
+
+7
+00:00:29.400 --> 00:00:34.680
+To prevent this chaos, a strict intermediary
+steps in, the operating system.
+
+8
+00:00:35.080 --> 00:00:39.110
+Without this silent manager, a computer
+is just a volatile collection of
+
+9
+00:00:39.160 --> 00:00:44.340
+electronics. The operating system turns
+it into a reliable functioning tool.
+
+10
+00:00:44.600 --> 00:00:47.140
+The operating system
+has two main missions.
+
+11
+00:00:47.400 --> 00:00:49.420
+The first is managing resources.
+
+12
+00:00:49.680 --> 00:00:52.800
+It allocates CPU time, memory, and energy.
+
+13
+00:00:53.000 --> 00:00:57.920
+When multiple programs demand the exact same
+resource at once, it acts as a referee,
+
+14
+00:00:58.120 --> 00:01:00.000
+actively resolving the conflicts.
+
+15
+00:01:00.500 --> 00:01:04.040
+The second mission is offering
+a machine that is easier to use.
+
+16
+00:01:04.260 --> 00:01:07.850
+Instead of forcing programmers to
+interact with hardware interrupts or raw
+
+17
+00:01:07.900 --> 00:01:13.620
+controller registers, it offers clean
+abstractions, processes, files, and sockets.
+
+18
+00:01:13.900 --> 00:01:18.610
+By doing this, it replaces an impossibly
+complex physical machine with an organized
+
+19
+00:01:18.660 --> 00:01:23.890
+programmable canvas. To see how a command
+actually reaches the hardware, we have to
+
+20
+00:01:23.940 --> 00:01:25.780
+map the system from top to bottom.
+
+21
+00:01:25.880 --> 00:01:28.260
+The journey begins at the top two layers.
+
+22
+00:01:28.900 --> 00:01:32.490
+Applications, where your programs and
+bash live, sitting just above the system
+
+23
+00:01:32.540 --> 00:01:38.010
+libraries, like glibc. Together, these top
+two layers operate in what is called user
+
+24
+00:01:38.060 --> 00:01:41.460
+mode. In user mode,
+libraries have some freedom.
+
+25
+00:01:41.540 --> 00:01:45.850
+They can handle simple tasks entirely on
+their own, like gathering text into a local
+
+26
+00:01:45.900 --> 00:01:50.950
+buffer. But the moment a program needs to
+physically write to the screen or ask for
+
+27
+00:01:51.000 --> 00:01:53.110
+more memory, it hits a hard limit.
+
+28
+00:01:53.160 --> 00:01:55.720
+This dividing line is
+the privilege boundary.
+
+29
+00:01:55.860 --> 00:02:00.020
+The only authorized way to cross this
+boundary is by making a system call.
+
+30
+00:02:00.200 --> 00:02:04.770
+By trapping applications above this line
+and stripping them of direct hardware
+
+31
+00:02:04.820 --> 00:02:10.020
+access, the system establishes the strict
+perimeter where all security checks begin.
+
+32
+00:02:10.480 --> 00:02:14.850
+Once the system call is made, the command
+drops below the boundary and enters kernel
+
+33
+00:02:14.900 --> 00:02:18.320
+mode. Here, the kernel
+takes absolute control.
+
+34
+00:02:18.880 --> 00:02:22.540
+Crucially, the kernel is not
+a process and it is not root.
+
+35
+00:02:22.740 --> 00:02:25.420
+It is the core software
+managing the system.
+
+36
+00:02:25.740 --> 00:02:30.190
+It handles active protection duties,
+enforcing file permissions and ensuring that
+
+37
+00:02:30.240 --> 00:02:33.020
+programs absolutely cannot
+read each other's memory.
+
+38
+00:02:33.620 --> 00:02:38.450
+The kernel subsystems, like the scheduler
+and memory manager, process the request
+
+39
+00:02:38.500 --> 00:02:41.580
+and hand it down to the
+next layer, the drivers.
+
+40
+00:02:42.260 --> 00:02:46.130
+Finally, the command reaches the hardware
+layer at the very bottom where physical
+
+41
+00:02:46.180 --> 00:02:52.030
+action is executed. This mandatory top-down
+sequence guarantees both functionality
+
+42
+00:02:52.080 --> 00:02:54.380
+and strict security across the system.
+
+43
+00:02:55.060 --> 00:02:59.140
+This exact layered architecture
+extends far beyond a single laptop.
+
+44
+00:02:59.420 --> 00:03:02.540
+In data centers and
+supercomputers, it dominates.
+
+45
+00:03:02.880 --> 00:03:08.020
+Since November 2017, every single
+machine on the TOP500 list runs on Linux.
+
+46
+00:03:08.300 --> 00:03:09.860
+It is also in your pocket.
+
+47
+00:03:10.240 --> 00:03:14.740
+Android phones use the Linux kernel
+while iOS runs on the XNU kernel.
+
+48
+00:03:15.280 --> 00:03:19.630
+Even cars and medical devices rely on
+this setup, often using real-time micro
+
+49
+00:03:19.680 --> 00:03:23.540
+kernels like QNX to guarantee
+exact timing and safety.
+
+50
+00:03:24.200 --> 00:03:29.060
+Across all these devices, the operating
+system serves as the invisible translator,
+
+51
+00:03:29.160 --> 00:03:33.300
+seamlessly bridging the gap between
+human intent and raw electrical power.
+
+52
+00:03:33.780 --> 00:03:38.280
+Let's review. Question one, which
+two layers run in user mode?
+
+53
+00:03:40.360 --> 00:03:42.060
+Applications and libraries.
+
+54
+00:03:42.660 --> 00:03:46.540
+Question two, what is the only way
+to cross the privilege boundary?
+
+55
+00:03:48.560 --> 00:03:54.680
+A system call. Now open animation A1.1
+in the course hub and run lab TD0.

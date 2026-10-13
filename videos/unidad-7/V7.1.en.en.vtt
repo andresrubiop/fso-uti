@@ -1,0 +1,284 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:08.890
+In lab TD6, we assign 8 separate programs
+to act as concurrent ticket sellers for a
+
+2
+00:00:08.940 --> 00:00:11.440
+shared pool of 100,000 tickets.
+
+3
+00:00:11.780 --> 00:00:14.820
+But when we check this terminal
+output, the math breaks.
+
+4
+00:00:15.020 --> 00:00:21.440
+They sold 103,195 tickets, leaving
+a negative balance of minus 7.
+
+5
+00:00:21.620 --> 00:00:24.260
+The code executed exactly as written.
+
+6
+00:00:24.480 --> 00:00:26.880
+The sellers are simply
+threads in a C process.
+
+7
+00:00:27.020 --> 00:00:30.970
+You can see the subtraction command,
+tickets--, running right here inside
+
+8
+00:00:31.020 --> 00:00:36.890
+a while loop. How can a computer accurately
+run a subtraction command, yet sell more
+
+9
+00:00:36.940 --> 00:00:38.820
+items than actually exist?
+
+10
+00:00:39.240 --> 00:00:41.820
+The answer lies in how threads execute.
+
+11
+00:00:42.240 --> 00:00:46.910
+The illusion of simultaneous execution
+creates hidden blind spots that silently
+
+12
+00:00:46.960 --> 00:00:52.140
+corrupt your data. Developers use threads
+instead of full processes for one reason,
+
+13
+00:00:52.300 --> 00:00:57.830
+speed. As this output shows, creating a
+process on our course machine takes 248.8
+
+14
+00:00:57.880 --> 00:01:02.980
+microseconds. That costs 6.0 times
+more than creating a single thread.
+
+15
+00:01:03.560 --> 00:01:05.940
+Threads are faster because
+they don't copy data.
+
+16
+00:01:06.380 --> 00:01:10.720
+Architecturally, user mode sits above the
+privilege boundary, kernel mode below.
+
+17
+00:01:10.940 --> 00:01:14.040
+Inside a user process,
+threads operate together.
+
+18
+00:01:14.180 --> 00:01:19.000
+They share the whole address space,
+code, descriptors, heap, and global data.
+
+19
+00:01:19.300 --> 00:01:23.240
+But each thread maintains its own
+private stack and hardware registers.
+
+20
+00:01:23.540 --> 00:01:28.100
+This shared memory architecture is
+fast, but it is physically vulnerable.
+
+21
+00:01:28.340 --> 00:01:32.210
+Because there is no memory protection
+between them, a bug in one thread can
+
+22
+00:01:32.260 --> 00:01:34.380
+instantly corrupt everyone's data.
+
+23
+00:01:34.660 --> 00:01:38.450
+Let's look back at that specific line of
+C code responsible for the ticket sale
+
+24
+00:01:38.500 --> 00:01:44.430
+subtraction. For an x86-64 processor,
+a single line of C code is not a single
+
+25
+00:01:44.480 --> 00:01:49.340
+atomic step. The hardware breaks the
+subtraction down into three distinct steps,
+
+26
+00:01:49.400 --> 00:01:53.690
+reading the variable from memory into a
+register, subtracting one, and writing the
+
+27
+00:01:53.740 --> 00:01:57.970
+new value back to memory. The problem
+occurs when two separate threads attempt to
+
+28
+00:01:58.020 --> 00:02:00.220
+run these steps at the exact same time.
+
+29
+00:02:00.440 --> 00:02:04.770
+If thread A and thread B perform the read
+step simultaneously, they both pull the
+
+30
+00:02:04.820 --> 00:02:06.960
+exact same starting number from memory.
+
+31
+00:02:07.460 --> 00:02:12.010
+Both threads then subtract one in their
+private registers, and both write the exact
+
+32
+00:02:12.060 --> 00:02:14.900
+same updated number back to shared memory.
+
+33
+00:02:15.220 --> 00:02:17.620
+One write completely overwrites the other.
+
+34
+00:02:17.880 --> 00:02:20.660
+This temporal collision
+is a race condition.
+
+35
+00:02:21.360 --> 00:02:25.710
+Because the scheduler can interleave these
+hardware steps in any order, basic read
+
+36
+00:02:25.760 --> 00:02:28.480
+and write operations are
+unsafe for shared data.
+
+37
+00:02:28.780 --> 00:02:33.550
+To fix this, we need a critical section,
+a protected fragment of code that only one
+
+38
+00:02:33.600 --> 00:02:36.740
+thread may run at a time to
+ensure mutual exclusion.
+
+39
+00:02:37.040 --> 00:02:42.140
+The standard tool to enforce this boundary
+is the POSIX function pthread_mutex_lock.
+
+40
+00:02:42.440 --> 00:02:46.530
+As this code shows, whoever takes the
+lock executes their three-step operation
+
+41
+00:02:46.580 --> 00:02:51.720
+uninterrupted. If another thread arrives,
+it sleeps until the mutex is unlocked.
+
+42
+00:02:52.180 --> 00:02:54.900
+Running this protected code
+yields the correct result.
+
+43
+00:02:55.080 --> 00:02:59.970
+The output now accurately records exactly
+100,000 tickets sold, with no lost
+
+44
+00:03:00.020 --> 00:03:04.040
+updates. A mutex acts as a
+strict physical bottleneck.
+
+45
+00:03:04.200 --> 00:03:08.120
+It trades maximum parallel speed
+for guaranteed data integrity.
+
+46
+00:03:08.520 --> 00:03:12.780
+There is a structurally different
+alternative to locking, the semaphore.
+
+47
+00:03:12.900 --> 00:03:17.330
+A semaphore is an integer equipped with
+inherently atomic operations built into the
+
+48
+00:03:17.380 --> 00:03:21.890
+hardware. Instead of locking a separate
+section of code to update a variable, the
+
+49
+00:03:21.940 --> 00:03:24.360
+semaphore actually is the ticket counter.
+
+50
+00:03:24.520 --> 00:03:28.970
+A function like sem_trywait checks the
+integer and subtracts one in a single
+
+51
+00:03:29.020 --> 00:03:33.410
+indivisible step. Utilizing hardware-level
+atomic instructions completely
+
+52
+00:03:33.460 --> 00:03:36.740
+eliminates the intermediate states
+where race conditions thrive.
+
+53
+00:03:37.320 --> 00:03:41.070
+Let's review. What memory does a thread
+share with other threads in the same
+
+54
+00:03:41.120 --> 00:03:43.380
+process, and what is kept private?
+
+55
+00:03:43.660 --> 00:03:48.110
+They share code, global data, the heap,
+and descriptors, but each has its own
+
+56
+00:03:48.160 --> 00:03:49.940
+private stack and registers.
+
+57
+00:03:50.580 --> 00:03:55.540
+Question two, why is subtracting a shared
+variable in C not an atomic operation?
+
+58
+00:03:55.880 --> 00:04:00.290
+Because the processor executes it in three
+separate steps, reading, subtracting, and
+
+59
+00:04:00.340 --> 00:04:07.800
+writing. Now open animations A7.1 and
+A7.4 in the course hub and run lab TD6.

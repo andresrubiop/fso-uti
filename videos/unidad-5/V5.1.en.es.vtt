@@ -1,0 +1,301 @@
+WEBVTT
+
+1
+00:00:03.020 --> 00:00:08.250
+En un programa típico en C, un proceso padre
+puede necesitar enviar un flujo continuo de
+
+2
+00:00:08.300 --> 00:00:13.950
+datos a un proceso hijo. Pero a veces, en
+lugar de terminar la tarea, el flujo de datos
+
+3
+00:00:14.000 --> 00:00:18.830
+se detiene de golpe. El programa se
+congela por completo y la terminal deja de
+
+4
+00:00:18.880 --> 00:00:21.560
+responder. Es un interbloqueo.
+
+5
+00:00:21.760 --> 00:00:26.310
+Ocurre cuando un programa que debería terminar
+su ejecución acaba esperando para siempre
+
+6
+00:00:26.360 --> 00:00:28.030
+un evento que nunca va a ocurrir.
+
+7
+00:00:28.080 --> 00:00:32.820
+Si miramos la salida de la terminal, vemos
+que al final el sistema tuvo que intervenir
+
+8
+00:00:32.960 --> 00:00:36.860
+y matar el programa bloqueado tras un
+tiempo límite, con estado de salida 124.
+
+9
+00:00:37.480 --> 00:00:42.490
+Entonces, ¿por qué un flujo de bytes perfectamente
+válido entre dos procesos emparentados acaba
+
+10
+00:00:42.540 --> 00:00:44.380
+en un bloqueo permanente?
+
+11
+00:00:44.620 --> 00:00:48.400
+Para diagnosticar este bloqueo, hay que
+mirar debajo de la frontera de privilegios.
+
+12
+00:00:48.480 --> 00:00:52.250
+Esta frontera separa nuestros programas, que
+corren en modo usuario, del núcleo del sistema
+
+13
+00:00:52.300 --> 00:00:57.550
+operativo. Cuando un programa usa la
+llamada al sistema pipe, crea un búfer
+
+14
+00:00:57.600 --> 00:01:02.530
+circular dentro del núcleo. Este búfer funciona como
+un flujo continuo de bytes, que mueve los datos
+
+15
+00:01:02.580 --> 00:01:05.240
+estrictamente en orden, sin
+fronteras entre mensajes.
+
+16
+00:01:05.380 --> 00:01:10.240
+Después, el núcleo le devuelve al proceso en modo
+usuario exactamente dos descriptores de archivo.
+
+17
+00:01:10.300 --> 00:01:14.460
+Uno sirve solo para leer y
+el otro solo para escribir.
+
+18
+00:01:14.660 --> 00:01:17.410
+La tubería ofrece un puente
+directo y físico para los datos.
+
+19
+00:01:17.460 --> 00:01:22.230
+Pero el sistema operativo te exige
+gestionar a mano, y con rigor, estos
+
+20
+00:01:22.280 --> 00:01:25.080
+descriptores para que el puente
+funcione de forma segura.
+
+21
+00:01:25.360 --> 00:01:29.610
+Cuando el proceso padre llama a fork,
+se duplica y crea un proceso hijo
+
+22
+00:01:29.660 --> 00:01:32.290
+idéntico, a su lado, en modo usuario.
+
+23
+00:01:32.340 --> 00:01:34.860
+El hijo lo hereda todo del padre.
+
+24
+00:01:35.000 --> 00:01:39.330
+Eso significa que los dos procesos tienen ahora su
+propio par de descriptores de lectura y escritura,
+
+25
+00:01:39.380 --> 00:01:42.090
+que apuntan al mismo búfer del núcleo.
+
+26
+00:01:42.140 --> 00:01:45.220
+De aquí sale la regla
+de oro de las tuberías.
+
+27
+00:01:45.440 --> 00:01:47.840
+Los datos deben ir en un solo sentido.
+
+28
+00:01:48.080 --> 00:01:52.330
+Para asegurarlo, cada proceso tiene
+que cortar las conexiones que no piensa
+
+29
+00:01:52.380 --> 00:01:57.170
+usar. En el montaje habitual, el padre
+cierra con close su extremo de lectura y
+
+30
+00:01:57.220 --> 00:01:59.500
+el hijo cierra su extremo de escritura.
+
+31
+00:01:59.700 --> 00:02:04.190
+Cerrar estos descriptores sin uso es la única forma
+de que el núcleo conozca el verdadero sentido,
+
+32
+00:02:04.240 --> 00:02:05.390
+único, del flujo de datos.
+
+33
+00:02:05.440 --> 00:02:10.530
+Con la tubería bien montada, el proceso
+padre empieza a usar la llamada write
+
+34
+00:02:10.580 --> 00:02:12.980
+para meter bytes a toda prisa en el canal.
+
+35
+00:02:13.120 --> 00:02:16.120
+Pero este búfer del núcleo
+tiene un límite físico estricto.
+
+36
+00:02:16.380 --> 00:02:21.520
+En Linux, la capacidad por omisión
+es exactamente 65 536 bytes.
+
+37
+00:02:21.880 --> 00:02:25.910
+Cuando esa capacidad de 64 kilobytes
+se llena, el núcleo interviene.
+
+38
+00:02:25.960 --> 00:02:30.490
+Bloquea al proceso padre y no lo deja
+escribir más datos hasta que el hijo
+
+39
+00:02:30.540 --> 00:02:32.390
+haga una lectura y libere espacio.
+
+40
+00:02:32.440 --> 00:02:36.480
+Al final, el proceso hijo
+termina su tarea y sale.
+
+41
+00:02:36.860 --> 00:02:41.250
+Cuando eso pasa, no queda ni un solo
+descriptor de lectura abierto en todo el
+
+42
+00:02:41.300 --> 00:02:43.800
+sistema. El núcleo detecta esa ausencia.
+
+43
+00:02:44.000 --> 00:02:48.540
+Si el padre intenta escribir otra vez, el
+núcleo lanza de inmediato la señal SIGPIPE
+
+44
+00:02:48.600 --> 00:02:51.940
+y termina limpiamente el proceso
+padre con estado de salida 141.
+
+45
+00:02:52.460 --> 00:02:55.830
+Estos límites de capacidad y estas
+señales fatales no son errores al azar.
+
+46
+00:02:55.880 --> 00:02:59.350
+Son las reglas estrictas que aplica el
+núcleo para desmontar ordenadamente el
+
+47
+00:02:59.400 --> 00:03:03.060
+canal de comunicación. Volvamos,
+entonces, al problema del principio.
+
+48
+00:03:03.460 --> 00:03:07.010
+¿Por qué nuestro primer programa se
+congeló para siempre en vez de recibir esa
+
+49
+00:03:07.060 --> 00:03:10.960
+señal SIGPIPE? El culpable es una
+sola línea de código que falta.
+
+50
+00:03:11.080 --> 00:03:14.640
+El proceso padre olvidó llamar a close
+sobre su propio descriptor de lectura.
+
+51
+00:03:15.040 --> 00:03:18.330
+Como ese descriptor sigue abierto,
+el núcleo aplica sus reglas al pie
+
+52
+00:03:18.380 --> 00:03:22.880
+de la letra. Cree que todavía existe
+un lector válido: el propio padre.
+
+53
+00:03:23.040 --> 00:03:26.830
+El padre llena rápidamente
+el búfer de 65 536 bytes.
+
+54
+00:03:26.880 --> 00:03:31.010
+Una vez lleno, el núcleo bloquea al padre
+para siempre, esperando a un lector que
+
+55
+00:03:31.060 --> 00:03:32.840
+nunca llegará a liberar el espacio.
+
+56
+00:03:33.180 --> 00:03:36.460
+Un solo descriptor sin cerrar
+crea un lector fantasma.
+
+57
+00:03:36.580 --> 00:03:40.390
+Este pequeño descuido convierte un mecanismo
+de seguridad del sistema en un interbloqueo
+
+58
+00:03:40.440 --> 00:03:42.720
+permanente. Hagamos un repaso rápido.
+
+59
+00:03:43.220 --> 00:03:45.840
+¿Cuál es la capacidad exacta
+de una tubería en Linux?
+
+60
+00:03:46.960 --> 00:03:50.220
+65 536 bytes. Segunda pregunta.
+
+61
+00:03:50.580 --> 00:03:54.000
+¿Qué señal se lanza si un proceso escribe
+en una tubería que no tiene lectores?
+
+62
+00:03:54.580 --> 00:03:57.040
+SIGPIPE, que provoca el
+estado de salida 141.
+
+63
+00:03:57.820 --> 00:04:02.240
+Ahora abre la animación A5.2 en
+el aula y haz el laboratorio TD4.
